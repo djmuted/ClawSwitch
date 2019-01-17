@@ -7,6 +7,16 @@
 #include "../Events/EventMgr.h"
 #include <SDL2/SDL.h>
 
+#define JOY_A     0
+#define JOY_B     1
+#define JOY_X     2
+#define JOY_Y     3
+#define JOY_MINUS 11
+#define JOY_LEFT  12
+#define JOY_UP    13
+#define JOY_RIGHT 14
+#define JOY_DOWN  15
+
 // Doesnt really do anything, just implementation of empty methods to conform to
 // IScreenElement interface
 class ScreenElementScene : public IScreenElement, public Scene

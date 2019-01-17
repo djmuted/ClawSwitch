@@ -5,7 +5,7 @@
 #include "../SharedDefines.h"
 
 class SceneNode;
-class MovementController : public IKeyboardHandler, public IPointerHandler
+class MovementController : public IKeyboardHandler, public IPointerHandler, public IJoystickHandler
 {
 public:
     MovementController(shared_ptr<SceneNode> controlledObject, float speed = 0.36f);
@@ -20,6 +20,10 @@ public:
     bool VOnPointerMove(SDL_MouseMotionEvent& mouseEvent);
     bool VOnPointerButtonDown(SDL_MouseButtonEvent& mouseEvent);
     bool VOnPointerButtonUp(SDL_MouseButtonEvent& mouseEvent);
+	
+	bool VOnJoystickButtonDown(Uint8 button);
+    bool VOnJoystickButtonUp(Uint8 button);
+    bool VOnJoystickAxisMotion(Uint8 axis, Sint16 value);
 
 private:
     shared_ptr<SceneNode> m_pControlledObject;

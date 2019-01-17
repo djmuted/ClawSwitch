@@ -22,6 +22,7 @@ ClawHumanView::ClawHumanView(SDL_Renderer* renderer)
 
     m_pKeyboardHandler = m_pFreeCameraController;
     m_pPointerHandler = m_pFreeCameraController;
+	m_pJoystickHandler = m_pFreeCameraController;
 }
 
 ClawHumanView::~ClawHumanView()
@@ -80,6 +81,7 @@ void ClawHumanView::VSetControlledActor(uint32 actorId)
     m_pActorController.reset(new ActorController(m_pControlledActor));
     m_pKeyboardHandler = m_pActorController;
     m_pPointerHandler = m_pActorController;
+	m_pJoystickHandler = m_pActorController;
 
     m_pCamera->SetTarget(m_pControlledActor);
 }

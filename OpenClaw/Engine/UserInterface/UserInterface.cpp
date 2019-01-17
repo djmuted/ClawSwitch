@@ -11,6 +11,10 @@
 #include "../Audio/Audio.h"
 
 #include <cctype>
+#include <vector>
+
+//std::vector<int> joyRepeat(20, 0);
+int lastJoy = -1;
 
 std::map<std::string, MenuPage> g_StringToMenuPageEnumMap =
 {
@@ -786,6 +790,69 @@ bool ScreenElementMenuPage::VOnEvent(SDL_Event& evt)
             }
         }
     }
+	else if (evt.type == SDL_JOYAXISMOTION)
+    {
+        if (evt.jaxis.axis == 1)
+        {
+            if (evt.jaxis.value < 0)
+            {
+                MoveToMenuItemIdx(activeMenuItemIdx, -1);
+                return true;
+            }
+            else if (evt.jaxis.value > 0)
+            {
+                MoveToMenuItemIdx(activeMenuItemIdx, 1);
+                return true;
+            }
+        }
+    }
+    else if (evt.type == SDL_JOYBUTTONDOWN)
+    {
+		int keyCode = evt.jbutton.button;
+		if(lastJoy == keyCode) {
+			return;
+		}
+		lastJoy = keyCode;
+
+        if (keyCode == JOY_DOWN)
+        {
+            MoveToMenuItemIdx(activeMenuItemIdx, 1);
+            return true;
+        }
+        else if (keyCode == JOY_UP)
+        {
+            MoveToMenuItemIdx(activeMenuItemIdx, -1);
+            return true;
+        }
+        else if (evt.jbutton.button == 0)
+        {
+            if (shared_ptr<ScreenElementMenuItem> pActiveMenuItem = GetActiveMenuItem())
+            {
+                if (!pActiveMenuItem->Press())
+                {
+                    LOG_WARNING("No event is assigned to button: " + pActiveMenuItem->GetName());
+                }
+                return true;
+            }
+            else
+            {
+                LOG_WARNING("Could not find any active menu item !");
+            }
+
+        }
+        else if (evt.jbutton.button == 1)
+        {
+            SoundInfo soundInfo(SOUND_MENU_SELECT_MENU_ITEM);
+            IEventMgr::Get()->VTriggerEvent(IEventDataPtr(
+                new EventData_Request_Play_Sound(soundInfo)));
+
+            IEventMgr::Get()->VQueueEvent(m_KeyToEventMap[SDL_SCANCODE_ESCAPE]);
+        }
+    }
+	else if (evt.type == SDL_JOYBUTTONUP)
+    {
+		lastJoy = -1;
+	}
 
     for (shared_ptr<ScreenElementMenuItem> pMenuItem : m_MenuItems)
     {

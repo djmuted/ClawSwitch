@@ -465,6 +465,17 @@ enum ActorPrototype
     ActorPrototype_Level10_MarrowParrot,
     ActorPrototype_Level10_BossGem,
 
+	// Level 11
+    ActorPrototype_Level11_Mercat,
+    ActorPrototype_Level11_Siren,
+    ActorPrototype_Level11_Fish,
+    ActorPrototype_Level11_TogglePeg,
+    ActorPrototype_Level11_BreakPlank,
+    ActorPrototype_Level11_ConveyorBelt,
+    ActorPrototype_Level11_Laser,
+    ActorPrototype_Level11_SirenProjectile,
+    ActorPrototype_Level11_TridentProjectile,
+	
     ActorPrototype_Max
 };
 
@@ -638,6 +649,14 @@ public:
     virtual bool VOnPointerMove(SDL_MouseMotionEvent& mouseEvent) = 0;
     virtual bool VOnPointerButtonDown(SDL_MouseButtonEvent& mouseEvent) = 0;
     virtual bool VOnPointerButtonUp(SDL_MouseButtonEvent& mouseEvent) = 0;
+};
+
+class IJoystickHandler
+{
+public:
+    virtual bool VOnJoystickButtonDown(Uint8 button) = 0;
+    virtual bool VOnJoystickButtonUp(Uint8 button) = 0;
+    virtual bool VOnJoystickAxisMotion(Uint8 axis, Sint16 value) = 0;
 };
 
 //-------------------------------------------------------------------------------------------------

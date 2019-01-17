@@ -92,3 +92,17 @@ bool MovementController::VOnPointerButtonUp(SDL_MouseButtonEvent& mouseEvent)
 
     return false;
 }
+bool MovementController::VOnJoystickButtonDown(Uint8 button)
+{
+    return false;
+}
+
+bool MovementController::VOnJoystickButtonUp(Uint8 button)
+{
+    return false;
+}
+
+bool MovementController::VOnJoystickAxisMotion(Uint8 axis, Sint16 value)
+{
+    return false;
+}

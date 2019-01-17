@@ -5,7 +5,7 @@
 #include "Engine/SharedDefines.h"
 
 class SceneNode;
-class ActorController : public IKeyboardHandler, public IPointerHandler
+class ActorController : public IKeyboardHandler, public IPointerHandler, public IJoystickHandler
 {
 public:
     ActorController(shared_ptr<SceneNode> controlledObject, float speed = 0.36f);
@@ -22,11 +22,18 @@ public:
     bool VOnPointerButtonDown(SDL_MouseButtonEvent& mouseEvent);
     bool VOnPointerButtonUp(SDL_MouseButtonEvent& mouseEvent);
 
+    bool VOnJoystickButtonDown(Uint8 button);
+    bool VOnJoystickButtonUp(Uint8 button);
+    bool VOnJoystickAxisMotion(Uint8 axis, Sint16 value);
+
 private:
     shared_ptr<SceneNode> m_pControlledObject;
     float m_Speed;
 
     std::map<int, bool> m_InputKeys;
+
+    std::map<int, bool> m_ControllerKeys;
+    std::map<int, int> m_ControllerAxis;
 
     // SDL_Scancode array
     const uint8* m_pKeyStates;

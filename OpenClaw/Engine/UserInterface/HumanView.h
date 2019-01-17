@@ -100,6 +100,8 @@ protected:
 
     shared_ptr<IKeyboardHandler> m_pKeyboardHandler;
     shared_ptr<IPointerHandler> m_pPointerHandler;
+	
+	shared_ptr<IJoystickHandler> m_pJoystickHandler;
 
     ScreenElementList m_ScreenElements;
 

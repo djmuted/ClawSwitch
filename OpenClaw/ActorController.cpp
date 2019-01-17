@@ -54,54 +54,54 @@ void ActorController::OnUpdate(uint32 msDiff)
 
     if (g_pApp->GetGlobalOptions()->useAlternateControls)
     {
-        if (m_InputKeys[SDLK_d])
+        if (m_InputKeys[SDLK_d] || m_ControllerAxis[0] > 0 || m_ControllerKeys[14])
         {
             moveX += m_Speed * (float)msDiff;
         }
-        if (m_InputKeys[SDLK_a])
+        if (m_InputKeys[SDLK_a] || m_ControllerAxis[0] < 0 || m_ControllerKeys[12])
         {
             moveX -= m_Speed * (float)msDiff;
         }
 
         // CLimbing
-        if (m_InputKeys[SDLK_s])
+        if (m_InputKeys[SDLK_s] || m_ControllerAxis[1] > 0 || m_ControllerKeys[15])
         {
             climbY += 5.0;
         }
-        if (m_InputKeys[SDLK_w])
+        if (m_InputKeys[SDLK_w] || m_ControllerAxis[1] < 0 || m_ControllerKeys[13])
         {
             climbY -= 5.0;
         }
 
         // Jumping
-        if (m_InputKeys[SDLK_SPACE] || m_InputKeys[SDLK_w])
+        if (m_InputKeys[SDLK_SPACE] || m_InputKeys[SDLK_w] || m_ControllerKeys[1])
         {
             moveY -= m_Speed * (float)msDiff;
         }
     }
     else
     {
-        if (m_InputKeys[SDLK_RIGHT])
+        if (m_InputKeys[SDLK_RIGHT] || m_ControllerAxis[0] > 0 || m_ControllerKeys[14])
         {
             moveX += m_Speed * (float)msDiff;
         }
-        if (m_InputKeys[SDLK_LEFT])
+        if (m_InputKeys[SDLK_LEFT] || m_ControllerAxis[0] < 0 || m_ControllerKeys[12])
         {
             moveX -= m_Speed * (float)msDiff;
         }
 
         // CLimbing
-        if (m_InputKeys[SDLK_DOWN])
+        if (m_InputKeys[SDLK_DOWN] || m_ControllerAxis[1] > 0 || m_ControllerKeys[15])
         {
             climbY += 5.0;
         }
-        if (m_InputKeys[SDLK_UP])
+        if (m_InputKeys[SDLK_UP] || m_ControllerAxis[1] < 0 || m_ControllerKeys[13])
         {
             climbY -= 5.0;
         }
 
         // Jumping
-        if (m_InputKeys[SDLK_SPACE])
+        if (m_InputKeys[SDLK_SPACE] || m_ControllerKeys[1])
         {
             moveY -= m_Speed * (float)msDiff;
         }
@@ -194,7 +194,7 @@ bool ActorController::VOnPointerButtonDown(SDL_MouseButtonEvent& mouseEvent)
         {
             HandleAction(ActionType_Fire);
         }
-        
+
         return true;
     }
     else if (mouseEvent.button == SDL_BUTTON_RIGHT)
@@ -227,6 +227,49 @@ bool ActorController::VOnPointerButtonUp(SDL_MouseButtonEvent& mouseEvent)
         m_MouseRightButtonDown = false;
         return true;
     }
+
+    return false;
+}
+
+
+
+bool ActorController::VOnJoystickButtonDown(Uint8 button)
+{
+    // ToDo: Make those buttons configurable
+    switch (button)
+    {
+        case 2:
+            HandleAction(ActionType_Change_Ammo_Type);
+            return true;
+        case 0:
+            HandleAction(ActionType_Fire);
+            return true;
+        case 3:
+            HandleAction(ActionType_Attack);
+            return true;
+    }
+
+    m_ControllerKeys[button] = true;
+
+    return false;
+}
+
+bool ActorController::VOnJoystickButtonUp(Uint8 button)
+{
+    m_ControllerKeys[button] = false;
+
+    if (button == 0)
+    {
+        shared_ptr<EventData_Actor_Fire_Ended> pFireEndedEvent(new EventData_Actor_Fire_Ended(m_pControlledObject->VGetProperties()->GetActorId()));
+        IEventMgr::Get()->VTriggerEvent(pFireEndedEvent);
+    }
+
+    return false;
+}
+
+bool ActorController::VOnJoystickAxisMotion(Uint8 axis, Sint16 value)
+{
+    m_ControllerAxis[axis] = value < 0 ? -1 : value > 0 ? 1 : 0;
 
     return false;
 }

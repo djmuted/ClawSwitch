@@ -489,7 +489,7 @@ bool BaseGameLogic::VLoadScoreScreen(const char* xmlScoreScreenResource)
     int nextLevelNumber = m_pCurrentLevel->GetLevelNumber() + 1;
 
     // Level 10 is the last implemented level
-    if (nextLevelNumber <= 10)
+    if (nextLevelNumber <= 11)
     {
         m_pGameSaveMgr->AddCheckpointSave(nextLevelNumber, nextLevelCheckpoint);
 
