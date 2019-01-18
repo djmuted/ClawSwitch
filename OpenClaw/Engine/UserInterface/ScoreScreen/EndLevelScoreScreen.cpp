@@ -395,6 +395,17 @@ bool ScreenElementScoreScreen::VOnEvent(SDL_Event& evt)
             }
             break;
         }
+		case SDL_JOYBUTTONDOWN:
+		{
+			int keyCode = evt.jbutton.button;
+                if (keyCode == 0 ||
+                    keyCode == 1)
+                {
+                    ForceNextState();
+                    return true;
+                }
+				break;
+		}
     }
 
     return false;
