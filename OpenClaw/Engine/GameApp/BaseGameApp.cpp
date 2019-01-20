@@ -642,6 +642,10 @@ bool BaseGameApp::InitializeDisplay(GameOptions& gameOptions)
 {
 LOG(">>>>> Initializing display...");
 
+#ifdef __SWITCH__
+    SDL_setenv("SDL_SOUNDFONTS", "claw.sf2", 1);
+#endif
+
     if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_VIDEO) != 0)
     {
         LOG_ERROR("Failed to initialize SDL2 library. Error: %s" + std::string(SDL_GetError()));

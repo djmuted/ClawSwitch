@@ -57,7 +57,7 @@ CXXFLAGS	:= $(CFLAGS) -fexceptions -Wno-missing-field-initializers -std=gnu++14 
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=${DEVKITPRO}/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map) -z muldefs
 
-LIBS	:=	-lfreetype -lSDL2_mixer -lmodplug -lmpg123 -lvorbisidec -logg -lSDL2_ttf -lSDL2_gfx -lSDL2_image -lpng -ljpeg `sdl2-config --libs` `freetype-config --libs` -lz -lnx -lbz2
+LIBS	:=	-lfreetype -lSDL2_mixer -lmodplug -lmpg123 -lvorbisidec -logg -lfluidsynth -lSDL2_ttf -lSDL2_gfx -lSDL2_image -lpng -ljpeg `sdl2-config --libs` `freetype-config --libs` -lz -lnx -lbz2
 
 			
 
