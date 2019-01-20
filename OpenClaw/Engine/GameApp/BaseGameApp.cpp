@@ -115,6 +115,8 @@ void BaseGameApp::Terminate()
     //SAFE_DELETE(m_pResourceCache);
 
     SaveGameOptions();
+
+    SDL_Quit();
 }
 
 #define STARTUP_TEST(condition, error) \
