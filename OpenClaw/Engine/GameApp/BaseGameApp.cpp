@@ -115,6 +115,8 @@ void BaseGameApp::Terminate()
     //SAFE_DELETE(m_pResourceCache);
 
     SaveGameOptions();
+
+    SDL_Quit();
 }
 
 #define STARTUP_TEST(condition, error) \
@@ -639,6 +641,10 @@ void BaseGameApp::RegisterEngineEvents()
 bool BaseGameApp::InitializeDisplay(GameOptions& gameOptions)
 {
 LOG(">>>>> Initializing display...");
+
+#ifdef __SWITCH__
+    SDL_setenv("SDL_SOUNDFONTS", "claw.sf2", 1);
+#endif
 
     if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_VIDEO) != 0)
     {
