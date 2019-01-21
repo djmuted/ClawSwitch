@@ -4,14 +4,18 @@ This port was possible thanks to:
 - pjasicek - creating the OpenClaw project
 - mialy - adding basic controller support
 - denispapec - implementing basic level 11 support
+- usineur - adding background music support
+- fgsfdsfgs - porting fluidsynth to the Switch
 
 You can find the original OpenClaw project here: https://github.com/pjasicek/OpenClaw
 
 # Bugs
 
-- in-game music does not play (unsupported format?)
-- analog controlls are wacky
 - not all levels are yet implemented by OpenClaw project
+
+# To do
+
+- add custom levels support?
 
 # Compilation
 
