@@ -52,59 +52,28 @@ void ActorController::OnUpdate(uint32 msDiff)
     // We need two conditions because I want behaviour such as when both right and left
     // buttons are pressed, I dont want actor to move, e.g. to have the move effect nullyfied
 
-    if (g_pApp->GetGlobalOptions()->useAlternateControls)
+    if (m_InputKeys[SDLK_RIGHT] || m_ControllerAxis[0] > 0 || m_ControllerKeys[14])
     {
-        if (m_InputKeys[SDLK_d] || m_ControllerAxis[0] > 0 || m_ControllerKeys[14])
-        {
-            moveX += m_Speed * (float)msDiff;
-        }
-        if (m_InputKeys[SDLK_a] || m_ControllerAxis[0] < 0 || m_ControllerKeys[12])
-        {
-            moveX -= m_Speed * (float)msDiff;
-        }
-
-        // CLimbing
-        if (m_InputKeys[SDLK_s] || m_ControllerAxis[1] > 0 || m_ControllerKeys[15])
-        {
-            climbY += 5.0;
-        }
-        if (m_InputKeys[SDLK_w] || m_ControllerAxis[1] < 0 || m_ControllerKeys[13])
-        {
-            climbY -= 5.0;
-        }
-
-        // Jumping
-        if (m_InputKeys[SDLK_SPACE] || m_InputKeys[SDLK_w] || m_ControllerKeys[1])
-        {
-            moveY -= m_Speed * (float)msDiff;
-        }
+        moveX += m_Speed * (float)msDiff;
     }
-    else
+    if (m_InputKeys[SDLK_LEFT] || m_ControllerAxis[0] < 0 || m_ControllerKeys[12])
     {
-        if (m_InputKeys[SDLK_RIGHT] || m_ControllerAxis[0] > 0 || m_ControllerKeys[14])
-        {
-            moveX += m_Speed * (float)msDiff;
-        }
-        if (m_InputKeys[SDLK_LEFT] || m_ControllerAxis[0] < 0 || m_ControllerKeys[12])
-        {
-            moveX -= m_Speed * (float)msDiff;
-        }
+        moveX -= m_Speed * (float)msDiff;
+    }
 
-        // CLimbing
-        if (m_InputKeys[SDLK_DOWN] || m_ControllerAxis[1] > 0 || m_ControllerKeys[15])
-        {
-            climbY += 5.0;
-        }
-        if (m_InputKeys[SDLK_UP] || m_ControllerAxis[1] < 0 || m_ControllerKeys[13])
-        {
-            climbY -= 5.0;
-        }
-
-        // Jumping
-        if (m_InputKeys[SDLK_SPACE] || m_ControllerKeys[1])
-        {
-            moveY -= m_Speed * (float)msDiff;
-        }
+    // CLimbing
+    if (m_InputKeys[SDLK_DOWN] || m_ControllerAxis[1] > 0 || m_ControllerKeys[15])
+    {
+        climbY += 5.0;
+    }
+    if (m_InputKeys[SDLK_UP] || m_ControllerAxis[1] < 0 || m_ControllerKeys[13])
+    {
+        climbY -= 5.0;
+    }
+    // Jumping
+    if (m_InputKeys[SDLK_SPACE] || m_ControllerKeys[1])
+    {
+        moveY -= m_Speed * (float)msDiff;
     }
 
     if (fabs(climbY) > FLT_EPSILON)
@@ -269,7 +238,7 @@ bool ActorController::VOnJoystickButtonUp(Uint8 button)
 
 bool ActorController::VOnJoystickAxisMotion(Uint8 axis, Sint16 value)
 {
-    m_ControllerAxis[axis] = value < 0 ? -1 : value > 0 ? 1 : 0;
+    m_ControllerAxis[axis] = value < -16383 ? -1 : value > 16383 ? 1 : 0;
 
     return false;
 }

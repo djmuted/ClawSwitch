@@ -13,8 +13,8 @@
 #include <cctype>
 #include <vector>
 
-//std::vector<int> joyRepeat(20, 0);
 int lastJoy = -1;
+int lastButton = -1;
 
 std::map<std::string, MenuPage> g_StringToMenuPageEnumMap =
 {
@@ -794,25 +794,35 @@ bool ScreenElementMenuPage::VOnEvent(SDL_Event& evt)
     {
         if (evt.jaxis.axis == 1)
         {
-            if (evt.jaxis.value < 0)
+            if (evt.jaxis.value < -16383)
             {
+				if(lastJoy == JOY_DOWN) {
+					return;
+				}
+				lastJoy = JOY_DOWN;
                 MoveToMenuItemIdx(activeMenuItemIdx, -1);
                 return true;
             }
-            else if (evt.jaxis.value > 0)
+            else if (evt.jaxis.value > 16383)
             {
+				if(lastJoy == JOY_UP) {
+					return;
+				}
+				lastJoy = JOY_UP;
                 MoveToMenuItemIdx(activeMenuItemIdx, 1);
                 return true;
-            }
+            } else if (evt.jaxis.value < 1000 && evt.jaxis.value > -1000) {
+				lastJoy = -1;
+			}
         }
     }
     else if (evt.type == SDL_JOYBUTTONDOWN)
     {
 		int keyCode = evt.jbutton.button;
-		if(lastJoy == keyCode) {
+		if(lastButton == keyCode) {
 			return;
 		}
-		lastJoy = keyCode;
+		lastButton = keyCode;
 
         if (keyCode == JOY_DOWN)
         {
@@ -851,7 +861,7 @@ bool ScreenElementMenuPage::VOnEvent(SDL_Event& evt)
     }
 	else if (evt.type == SDL_JOYBUTTONUP)
     {
-		lastJoy = -1;
+		lastButton = -1;
 	}
 
     for (shared_ptr<ScreenElementMenuItem> pMenuItem : m_MenuItems)

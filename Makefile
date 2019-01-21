@@ -33,7 +33,7 @@ TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
 SOURCES		:=	OpenClaw OpenClaw/Engine OpenClaw/Engine/Actor OpenClaw/Engine/Actor/Components OpenClaw/Engine/Actor/Components/AIComponents OpenClaw/Engine/Actor/Components/AuraComponents OpenClaw/Engine/Actor/Components/ControllerComponents OpenClaw/Engine/Actor/Components/EnemyAI OpenClaw/Engine/Actor/Components/EnemyAI/Gabriel OpenClaw/Engine/Actor/Components/EnemyAI/Marrow OpenClaw/Engine/Actor/Components/PickupComponents OpenClaw/Engine/Actor/Components/TriggerComponents OpenClaw/Engine/Audio OpenClaw/Engine/Events OpenClaw/Engine/GameApp OpenClaw/Engine/Graphics2D OpenClaw/Engine/Logger OpenClaw/Engine/Physics OpenClaw/Engine/Process OpenClaw/Engine/Resource OpenClaw/Engine/Resource/Loaders OpenClaw/Engine/Scene OpenClaw/Engine/UserInterface OpenClaw/Engine/UserInterface/ScoreScreen OpenClaw/Engine/Util OpenClaw/Engine/Util/Memory ThirdParty/Tinyxml libwap Box2D/Box2D Box2D/Box2D/Collision Box2D/Box2D/Collision/Shapes Box2D/Box2D/Common Box2D/Box2D/Dynamics Box2D/Box2D/Dynamics/Contacts Box2D/Box2D/Dynamics/Joints Box2D/Box2D/Rope
 DATA		:=	dat
-INCLUDES	:=	ThirdParty/Tinyxml ThirdParty libwap
+INCLUDES	:=	ThirdParty/Tinyxml ThirdParty libwap ThirdParty/SDL2_Mixer_modded/include ThirdParty/fluidsynth/include
 EXEFS_SRC	:=	exefs_src
 ROMFS       :=  data
 CONFIG_JSON := npdm.json
@@ -57,7 +57,7 @@ CXXFLAGS	:= $(CFLAGS) -fexceptions -Wno-missing-field-initializers -std=gnu++14 
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=${DEVKITPRO}/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map) -z muldefs
 
-LIBS	:=	-lfreetype -lSDL2_mixer -lmodplug -lmpg123 -lvorbisidec -logg -lfluidsynth -lSDL2_ttf -lSDL2_gfx -lSDL2_image -lpng -ljpeg `sdl2-config --libs` `freetype-config --libs` -lz -lnx -lbz2
+LIBS	:=	-lfreetype $(PWD)/ThirdParty/SDL2_Mixer_modded/lib/libSDL2_mixer.a $(PWD)/ThirdParty/fluidsynth/lib/libfluidsynth.a -lmodplug -lmpg123 -lvorbisidec -logg -lSDL2_ttf -lSDL2_gfx -lSDL2_image -lpng -ljpeg `sdl2-config --libs` `freetype-config --libs` -lz -lnx -lbz2
 
 			
 

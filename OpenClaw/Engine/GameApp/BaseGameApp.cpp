@@ -212,6 +212,7 @@ int32 BaseGameApp::Run()
             {
                 LOG_ERROR("Experiencing lag spikes, " + ToStr(consecutiveLagSpikes) + "high latency frames in a row");
             }
+			this->VOnRestore();
             continue;
         }
         consecutiveLagSpikes = 0;
@@ -693,6 +694,8 @@ LOG(">>>>> Initializing display...");
 	SDL_Texture * texture = SDL_CreateTextureFromSurface(m_pRenderer, image);
 	SDL_RenderCopy(m_pRenderer, texture, NULL, NULL);
 	SDL_RenderPresent(m_pRenderer);
+	SDL_DestroyTexture(texture);
+	SDL_FreeSurface(image);
     return true;
 }
 
@@ -714,6 +717,10 @@ bool BaseGameApp::InitializeAudio(GameOptions& gameOptions)
 
     LOG("Audio successfully initialized.");
 
+	Mix_Chunk *sound = Mix_LoadWAV("TITLE.wav");
+	SoundProperties soundProperties;
+	soundProperties.volume = 200;
+	m_pAudio->PlaySound(sound, soundProperties);
     return true;
 }
 
