@@ -12,6 +12,8 @@ class AnimationObserver;
 class AnimationSubject
 {
 public:
+    ~AnimationSubject();
+
     void NotifyAnimationLooped(Animation* pAnimation);
     void NotifyAnimationStarted(Animation* pAnimation);
     void NotifyAnimationFrameChanged(Animation* pAnimation, AnimationFrame* pLastFrame, AnimationFrame* pNewFrame);
@@ -53,9 +55,10 @@ struct SpecialAnimation
     bool setPositionDelay;
 };
 
-typedef std::map<std::string, Animation*> AnimationMap;
+typedef std::map<std::string, std::shared_ptr<Animation>> AnimationMap;
 
 class Image;
+class ActorRenderComponent;
 class AnimationComponent : public ActorComponent, public AnimationSubject
 {
     friend class Animation;
@@ -75,16 +78,16 @@ public:
     virtual void VUpdate(uint32 msDiff) override;
 
     // API
-    bool SetAnimation(std::string animationName);
+    bool SetAnimation(const std::string& animationName);
     bool HasAnimation(std::string& animName);
     void PauseAnimation();
     void ResumeAnimation();
     void ResetAnimation();
     void SetDelay(uint32 msDelay);
     void SetReverseAnimation(bool reverse);
-    inline Animation* GetCurrentAnimation() const { return _currentAnimation; }
+    inline std::shared_ptr<Animation> GetCurrentAnimation() const { return _currentAnimation; }
     inline std::string GetCurrentAnimationName() const { return _currentAnimation->GetName(); }
-    bool AddAnimation(std::string animName, Animation* pAnim);
+    bool AddAnimation(const std::string &animName, std::shared_ptr<Animation> &pAnim);
 
 private:
 
@@ -101,12 +104,14 @@ private:
 
 
     AnimationMap _animationMap;
-    Animation* _currentAnimation;
+    std::shared_ptr<Animation> _currentAnimation;
 
     // TODO: Get rid of this..
     std::vector<std::string> m_SpecialAnimationRequestList;
 
     std::vector<SpecialAnimation> m_SpecialAnimationList;
+
+    std::weak_ptr<ActorRenderComponent> m_pActorRenderComponent;
 };
 
 #endif

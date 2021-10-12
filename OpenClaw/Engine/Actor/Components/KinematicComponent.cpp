@@ -39,9 +39,9 @@ bool KinematicComponent::VInit(TiXmlElement* pData)
         return false;
     }
 
-    assert(SetPointIfDefined(&m_Properties.speed, pData->FirstChildElement("Speed"), "x", "y"));
-    assert(SetPointIfDefined(&m_Properties.minPosition, pData->FirstChildElement("MinPosition"), "x", "y"));
-    assert(SetPointIfDefined(&m_Properties.maxPosition, pData->FirstChildElement("MaxPosition"), "x", "y"));
+    DO_AND_CHECK(SetPointIfDefined(&m_Properties.speed, pData->FirstChildElement("Speed"), "x", "y"));
+    DO_AND_CHECK(SetPointIfDefined(&m_Properties.minPosition, pData->FirstChildElement("MinPosition"), "x", "y"));
+    DO_AND_CHECK(SetPointIfDefined(&m_Properties.maxPosition, pData->FirstChildElement("MaxPosition"), "x", "y"));
     ParseValueFromXmlElem(&m_Properties.hasTriggerBehaviour, pData->FirstChildElement("HasTriggerBehaviour"));
     ParseValueFromXmlElem(&m_Properties.hasStartBehaviour, pData->FirstChildElement("HasStartBehaviour"));
     ParseValueFromXmlElem(&m_Properties.hasStopBehaviour, pData->FirstChildElement("HasStopBehaviour"));
@@ -55,8 +55,7 @@ bool KinematicComponent::VInit(TiXmlElement* pData)
 
 void KinematicComponent::VPostInit()
 {
-    shared_ptr<PositionComponent> pPositionComponent =
-        MakeStrongPtr(m_pOwner->GetComponent<PositionComponent>(PositionComponent::g_Name));
+    shared_ptr<PositionComponent> pPositionComponent = m_pOwner->GetPositionComponent();
     assert(pPositionComponent);
 
     m_pPositionComponent = pPositionComponent.get();
@@ -256,8 +255,7 @@ void KinematicComponent::OnMoved(Point newPosition)
             Actor* pActor = (Actor*)pCarriedBody->GetUserData();
             assert(pActor);
             
-            shared_ptr<PhysicsComponent> pPhysicsComponent =
-                MakeStrongPtr(pActor->GetComponent<PhysicsComponent>(PhysicsComponent::g_Name));
+            shared_ptr<PhysicsComponent> pPhysicsComponent = pActor->GetPhysicsComponent();
 
             // Provide sanity check
             if (pPhysicsComponent && pPhysicsComponent->GetNumFootContacts() == 0)

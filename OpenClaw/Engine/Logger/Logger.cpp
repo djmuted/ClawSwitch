@@ -2,7 +2,7 @@
 
 namespace Logger
 {
-    void GetOutputString(std::string& outOutputBuffer, const std::string& tag, const std::string& message, const char* funcName, const char* sourceFile, unsigned int lineNum)
+    void GetOutputString(std::string &outOutputBuffer, const std::string &tag, const std::string &message, const char *funcName, const char *sourceFile, unsigned int lineNum)
     {
         if (funcName != NULL && sourceFile != NULL)
         {

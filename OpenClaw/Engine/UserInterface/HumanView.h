@@ -19,7 +19,7 @@ class CameraNode;
 class HumanView : public IGameView
 {
 public:
-    HumanView(SDL_Renderer* renderer);
+    HumanView(SDL_Renderer *renderer);
     virtual ~HumanView();
 
     // Interface
@@ -27,9 +27,13 @@ public:
     virtual void VOnLostDevice();
     virtual GameViewType VGetType() { return GameView_Human; }
     virtual uint32 VGetId() const { return m_ViewId; }
-    virtual void VOnAttach(uint32 viewId, uint32 actorId) { m_ViewId = viewId; m_ActorId = actorId; }
+    virtual void VOnAttach(uint32 viewId, uint32 actorId)
+    {
+        m_ViewId = viewId;
+        m_ActorId = actorId;
+    }
 
-    virtual bool VOnEvent(SDL_Event& evt);
+    virtual bool VOnEvent(SDL_Event &evt);
     virtual void VOnUpdate(uint32 msDiff);
 
     // Virtual methods to control layering of interface elements
@@ -43,11 +47,11 @@ public:
     shared_ptr<CameraNode> GetCamera() const { return m_pCamera; }
     shared_ptr<Scene> GetScene() const { return m_pScene; }
 
-    bool EnterMenu(TiXmlElement* pMenuData);
-    void LoadScoreScreen(TiXmlElement* pScoreScreenRootElem);
-    bool LoadGame(TiXmlElement* pLevelXmlElem, LevelData* pLevelData);
+    bool EnterMenu(TiXmlElement *pMenuData);
+    void LoadScoreScreen(TiXmlElement *pScoreScreenRootElem);
+    bool LoadGame(TiXmlElement *pLevelXmlElem, LevelData *pLevelData);
 
-    void RegisterConsoleCommandHandler(void(*handler)(const char*, void*), void* userdata);
+    void RegisterConsoleCommandHandler(void (*handler)(const char *, void *), void *userdata);
 
     shared_ptr<Console> GetConsole() const { return m_pConsole; }
 
@@ -55,10 +59,14 @@ public:
     bool IsRendering() { return m_bRendering; }
     void SetPostponeRenderPresent(bool postpone) { m_bPostponeRenderPresent = postpone; }
 
-    void SetCurrentLevelMusic(const std::string& music) { m_CurrentLevelMusic = music; }
+    void SetCurrentLevelMusic(const std::string &music) { m_CurrentLevelMusic = music; }
 
 protected:
-    virtual bool VLoadGameDelegate(TiXmlElement* pLevelXmlElem, LevelData* pLevelData) { VPushElement(m_pScene); return true; }
+    virtual bool VLoadGameDelegate(TiXmlElement *pLevelXmlElem, LevelData *pLevelData)
+    {
+        VPushElement(m_pScene);
+        return true;
+    }
 
     // Delegates
     void NewHUDElementDelegate(IEventDataPtr pEventData);
@@ -85,7 +93,7 @@ protected:
     uint32 m_ViewId;
     uint32 m_ActorId;
 
-    ProcessMgr* m_pProcessMgr;
+    ProcessMgr *m_pProcessMgr;
 
     uint64 m_CurrentTick;
     uint64 m_LastDraw;
@@ -100,8 +108,8 @@ protected:
 
     shared_ptr<IKeyboardHandler> m_pKeyboardHandler;
     shared_ptr<IPointerHandler> m_pPointerHandler;
-	
-	shared_ptr<IJoystickHandler> m_pJoystickHandler;
+    shared_ptr<ITouchHandler> m_pTouchHandler;
+    shared_ptr<IJoystickHandler> m_pJoystickHandler;
 
     ScreenElementList m_ScreenElements;
 
@@ -182,7 +190,7 @@ public:
     void Activate() { m_bIsActive = true; }
     bool IsDone() { return m_bIsDone; }
 
-    void Render(SDL_Renderer* pRenderer, SDL_Texture* pFragmentTexture, Point& lineOffset, bool asRow);
+    void Render(SDL_Renderer *pRenderer, SDL_Texture *pFragmentTexture, Point &lineOffset, bool asRow);
 
 private:
     int m_Length;
@@ -227,7 +235,7 @@ private:
     int m_CurrentTime;
 
     Point m_FragmentSize;
-    SDL_Texture* m_pFadingTexture;
+    SDL_Texture *m_pFadingTexture;
     std::vector<shared_ptr<FadingLine>> m_Lines;
 };
 

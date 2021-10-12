@@ -8,12 +8,19 @@
 
 #include "../UserInterface/Console.h"
 #include "CommandHandler.h"
+#include "../UserInterface/Touch/TouchManager.h"
 
 const int DEFAULT_SCREEN_WIDTH = 1280;
 const int DEFAULT_SCREEN_HEIGHT = 768;
 
 #ifndef FAIL
-#define FAIL(reason) do { LOG_ERROR(reason); IEventDataPtr pQuitEvent(new EventData_Quit_Game()); IEventMgr::Get()->VTriggerEvent(pQuitEvent); } while (0);
+#define FAIL(reason)                                         \
+    do                                                       \
+    {                                                        \
+        LOG_ERROR(reason);                                   \
+        IEventDataPtr pQuitEvent(new EventData_Quit_Game()); \
+        IEventMgr::Get()->VTriggerEvent(pQuitEvent);         \
+    } while (0);
 #endif
 
 struct GameOptions
@@ -78,7 +85,7 @@ struct GameOptions
     std::string midiRpcServerPath;
 
     // Font
-    std::vector<const char*> fontNames;
+    std::vector<const char *> fontNames;
     std::string consoleFontName;
     unsigned consoleFontSize;
 
@@ -135,12 +142,12 @@ struct GlobalOptions
         maxJumpHeight = 150;
         powerupMaxJumpHeight = 200;
         startLookUpOrDownTime = 1500;
+        freezeTime = 2000;
         maxLookUpOrDownDistance = 250;
         lookUpOrDownSpeed = 250;
         clawRunningSpeed = 5.0;
         //springBoardSpringHeight = 450;
         springBoardSpringSpeed = 11;
-        useAlternateControls = false;
         clawMinFallHeight = 500.0f;
         loadAllLevelSaves = false;
         showFps = true;
@@ -156,17 +163,35 @@ struct GlobalOptions
     float maxJumpHeight;
     float powerupMaxJumpHeight;
     int startLookUpOrDownTime;
+    int freezeTime;
     int maxLookUpOrDownDistance;
-    int lookUpOrDownSpeed; 
+    int lookUpOrDownSpeed;
     std::string scoreScreenPalPath;
     double clawRunningSpeed;
     //int springBoardSpringHeight;
     double springBoardSpringSpeed;
-    bool useAlternateControls;
     float clawMinFallHeight;
     bool loadAllLevelSaves;
     bool showFps;
     bool showPosition;
+};
+
+struct ControlOptions
+{
+    ControlOptions()
+    {
+        useAlternateControls = false;
+        touchScreen.enable = false;
+        touchScreen.distanceThreshold = 0.1;
+        touchScreen.timeThreshold = 100;
+    }
+    bool useAlternateControls;
+    struct
+    {
+        bool enable;
+        float distanceThreshold;
+        unsigned int timeThreshold;
+    } touchScreen;
 };
 
 struct DebugOptions
@@ -206,37 +231,39 @@ class IResourceMgr;
 class Audio;
 
 typedef std::map<std::string, std::string> LocalizedStringsMap;
-typedef std::map<std::string, TTF_Font*> FontMap;
-typedef std::map<ActorPrototype, const TiXmlElement*> ActorXmlPrototypeMap;
+typedef std::map<std::string, TTF_Font *> FontMap;
+typedef std::map<ActorPrototype, const TiXmlElement *> ActorXmlPrototypeMap;
 typedef std::map<int, shared_ptr<LevelMetadata>> LevelMetadataMap;
 
 class BaseGameApp
 {
     // Command handler should have unlimited access
     friend class CommandHandler;
+    friend void Loop(void *instance);
 
 public:
     BaseGameApp();
 
     // Must be defined in inherited class
-    virtual const char* VGetGameTitle() = 0;
-    virtual const char* VGetGameAppDirectory() = 0;
-    virtual BaseGameLogic* VCreateGameAndView() = 0;
+    virtual const char *VGetGameTitle() = 0;
+    virtual const char *VGetGameAppDirectory() = 0;
+    virtual BaseGameLogic *VCreateGameAndView() = 0;
 
     // Icon ?
 
-    virtual bool Initialize(int argc, char** argv);
-    virtual void VPostInitialize() { }
+    virtual bool Initialize(int argc, char **argv);
+    virtual void VPostInitialize() {}
     virtual void Terminate();
 
     // HW Events
-    void OnEvent(SDL_Event& event);
+    void OnEvent(SDL_Event &event);
     void OnDisplayChange(int newWidth, int newHeight);
     void VOnRestore();
     void VOnMinimized();
 
     // Main loop
     int32 Run();
+    void StepLoop();
 
     // This is provided to be used the engine
     bool LoadStrings(std::string language);
@@ -245,76 +272,79 @@ public:
     void SetScale(Point scale);
     uint32 GetWindowFlags();
 
-    inline SDL_Renderer* GetRenderer() const { return m_pRenderer; }
+    inline SDL_Renderer *GetRenderer() const { return m_pRenderer; }
     // TODO: Memory leak most likely
-    inline WapPal* GetCurrentPalette() const { return m_pPalette; }
-    void SetCurrentPalette(WapPal* palette) { m_pPalette = palette; }
-    inline ResourceCache* GetResourceCache() const { return m_pResourceCache; }
-    inline IResourceMgr* GetResourceMgr() const { return m_pResourceMgr; }
+    inline WapPal *GetCurrentPalette() const { return m_pPalette; }
+    void SetCurrentPalette(WapPal *palette) { m_pPalette = palette; }
+    // Deprecated. Use GetResourceMgr()
+    std::shared_ptr<ResourceCache> GetResourceCache() const;
+    inline IResourceMgr *GetResourceMgr() const { return m_pResourceMgr; }
 
-    BaseGameLogic* GetGameLogic() const { return m_pGame; }
-    HumanView* GetHumanView() const;
+    BaseGameLogic *GetGameLogic() const { return m_pGame; }
+    HumanView *GetHumanView() const;
 
-    SDL_Window* GetWindow() const { return m_pWindow; }
+    SDL_Window *GetWindow() const { return m_pWindow; }
     Point GetWindowSize() { return m_WindowSize; }
     Point GetWindowSizeScaled() { return Point(m_WindowSize.x / GetScale().x, m_WindowSize.y / GetScale().y); }
     void RequestWindowSizeChange(Point newSize, bool fullscreen);
 
-    inline EventMgr* GetEventMgr() const { return m_pEventMgr; }
+    inline EventMgr *GetEventMgr() const { return m_pEventMgr; }
 
-    TTF_Font* GetConsoleFont() const { return m_pConsoleFont; }
+    TTF_Font *GetConsoleFont() const { return m_pConsoleFont; }
 
-    Audio* GetAudio() const { return m_pAudio; }
+    Audio *GetAudio() const { return m_pAudio; }
 
-    bool LoadGameOptions(const char* inConfigFile = "config.xml");
-    void SaveGameOptions(const char* outConfigFile = "config.xml");
+    bool LoadGameOptions(const char *inConfigFile = "config.xml");
+    void SaveGameOptions(const char *outConfigFile = "config.xml");
 
-    bool LoadLevel(const char* levelResource);
+    bool LoadLevel(const char *levelResource);
 
-    const GameCheats* GetGameCheats() const { return &m_GameCheats; }
-    const ConsoleConfig* GetConsoleConfig() const { return &m_GameOptions.consoleConfig; }
-    GameOptions* GetGameConfig() { return &m_GameOptions; }
-    const GlobalOptions* GetGlobalOptions() const { return &m_GlobalOptions; }
-    const DebugOptions* GetDebugOptions() const { return &m_DebugOptions; }
+    const GameCheats *GetGameCheats() const { return &m_GameCheats; }
+    const ConsoleConfig *GetConsoleConfig() const { return &m_GameOptions.consoleConfig; }
+    GameOptions *GetGameConfig() { return &m_GameOptions; }
+    const GlobalOptions *GetGlobalOptions() const { return &m_GlobalOptions; }
+    const ControlOptions *GetControlOptions() const { return &m_ControlOptions; }
+    const DebugOptions *GetDebugOptions() const { return &m_DebugOptions; }
 
-    TiXmlElement* GetActorPrototypeElem(ActorPrototype proto);
+    TiXmlElement *GetActorPrototypeElem(ActorPrototype proto);
 
     const shared_ptr<LevelMetadata> GetLevelMetadata(int levelNumber) const;
-	
-	void HandleJoystickDeviceEvent(Uint32 type, Sint32 which);
+
+    void RegisterTouchRecognizers(ITouchHandler &touchHandler);
+
+    void HandleJoystickDeviceEvent(Uint32 type, Sint32 which);
 
 protected:
-    virtual void VRegisterGameEvents() { }
+    virtual void VRegisterGameEvents() {}
     virtual bool VPerformStartupTests();
 
-    BaseGameLogic* m_pGame;
-    ResourceCache* m_pResourceCache;
-    IResourceMgr* m_pResourceMgr; // This should replace m_pResourceCache since it wraps it
-    EventMgr* m_pEventMgr;
-    TTF_Font* m_pConsoleFont;
-    Audio* m_pAudio;
-
-    TiXmlDocument m_XmlConfiguration;
+    BaseGameLogic *m_pGame;
+    IResourceMgr *m_pResourceMgr;
+    EventMgr *m_pEventMgr;
+    TTF_Font *m_pConsoleFont;
+    Audio *m_pAudio;
+    TouchManager *m_pTouchManager;
 
     LocalizedStringsMap m_LocalizedStringsMap;
     FontMap m_FontMap;
 
     GameOptions m_GameOptions;
-	
-	SDL_Joystick* m_Joystick;
+
+    SDL_Joystick *m_Joystick;
     Sint32 m_JoystickDeviceIndex;
 
 private:
-    bool InitializeDisplay(GameOptions& gameOptions);
-    bool InitializeAudio(GameOptions& gameOptions);
-    bool InitializeResources(GameOptions& gameOptions);
-    bool InitializeFont(GameOptions& gameOptions);
-    bool InitializeLocalization(GameOptions& gameOptions);
-	bool InitializeControllers(GameOptions& gameOptions);
+    bool InitializeDisplay(GameOptions &gameOptions);
+    bool InitializeAudio(GameOptions &gameOptions);
+    bool InitializeResources(GameOptions &gameOptions);
+    bool InitializeFont(GameOptions &gameOptions);
+    bool InitializeLocalization(GameOptions &gameOptions);
+    bool InitializeControllers(GameOptions &gameOptions);
+    bool InitializeTouchManager(GameOptions &gameOptions);
     bool InitializeEventMgr();
     bool ReadConsoleConfig();
-    bool ReadActorXmlPrototypes(GameOptions& gameOptions);
-    bool ReadLevelMetadata(GameOptions& gameOptions);
+    bool ReadActorXmlPrototypes(GameOptions &gameOptions);
+    bool ReadLevelMetadata(GameOptions &gameOptions);
 
     void RegisterEngineEvents();
 
@@ -324,11 +354,11 @@ private:
 
     void QuitGameDelegate(IEventDataPtr pEventData);
 
-    TiXmlDocument CreateAndReturnDefaultConfig(const char* inConfigFile);
+    TiXmlDocument CreateAndReturnDefaultConfig(const char *inConfigFile);
 
-    SDL_Window* m_pWindow;
-    SDL_Renderer* m_pRenderer;
-    WapPal* m_pPalette;
+    SDL_Window *m_pWindow;
+    SDL_Renderer *m_pRenderer;
+    WapPal *m_pPalette;
 
     bool m_IsRunning;
     bool m_QuitRequested;
@@ -338,12 +368,13 @@ private:
 
     GameCheats m_GameCheats;
     GlobalOptions m_GlobalOptions;
+    ControlOptions m_ControlOptions;
     DebugOptions m_DebugOptions;
 
     ActorXmlPrototypeMap m_ActorXmlPrototypeMap;
     LevelMetadataMap m_LevelMetadataMap;
 };
 
-extern BaseGameApp* g_pApp;
+extern BaseGameApp *g_pApp;
 
 #endif

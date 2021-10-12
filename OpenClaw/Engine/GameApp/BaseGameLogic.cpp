@@ -70,7 +70,7 @@ BaseGameLogic::~BaseGameLogic()
     SAFE_DELETE(m_pActorFactory);
 
     // Destroy all actors
-    for (auto actorIter : m_ActorMap)
+    for (auto &actorIter : m_ActorMap)
     {
         actorIter.second->Destroy();
     }
@@ -82,6 +82,10 @@ BaseGameLogic::~BaseGameLogic()
 bool BaseGameLogic::Initialize()
 {
     m_pActorFactory = VCreateActorFactory();
+
+    if (!m_pGameSaveMgr->IsSaveSupported()) {
+        return m_pGameSaveMgr->Initialize(nullptr);
+    }
 
     std::string savesFilePath = g_pApp->GetGameConfig()->userDirectory + g_pApp->GetGameConfig()->savesFile;
 
@@ -170,7 +174,7 @@ void RenderLoadingScreen(shared_ptr<Image> pBackground, SDL_Rect& renderRect, Po
     SDL_RenderCopy(pRenderer, pTotalProgressBar, NULL, &totalProgressBarRect);
     SDL_RenderCopy(pRenderer, pRemainingProgressBar, NULL, &remainingProgressBarRect);
 
-    SDL_RenderPresent(pRenderer);
+    Util::RenderForcePresent(pRenderer);
 
     SDL_DestroyTexture(pTotalProgressBar);
     SDL_DestroyTexture(pRemainingProgressBar);
@@ -367,7 +371,7 @@ bool BaseGameLogic::VLoadGame(const char* xmlLevelResource)
     pEventMgr->VTriggerEvent(IEventDataPtr(new EventData_Teleport_Actor(clawId, m_CurrentSpawnPosition)));
 
     // Save possible pickup items
-    for (auto actorIter : m_ActorMap)
+    for (auto &actorIter : m_ActorMap)
     {
         shared_ptr<TreasurePickupComponent> pTreasurePickupComponent =
             MakeStrongPtr(actorIter.second->GetComponent<TreasurePickupComponent>());
@@ -488,13 +492,13 @@ bool BaseGameLogic::VLoadScoreScreen(const char* xmlScoreScreenResource)
     int finishedLevelNumber = m_pCurrentLevel->GetLevelNumber();
     int nextLevelNumber = m_pCurrentLevel->GetLevelNumber() + 1;
 
-    // Level 10 is the last implemented level
+    // Level 11 is the last implemented level
     if (nextLevelNumber <= 11)
     {
         m_pGameSaveMgr->AddCheckpointSave(nextLevelNumber, nextLevelCheckpoint);
 
         // If not in testing mode
-        if (!g_pApp->GetGlobalOptions()->loadAllLevelSaves)
+        if (m_pGameSaveMgr->IsSaveSupported() && !g_pApp->GetGlobalOptions()->loadAllLevelSaves)
         {
             TiXmlDocument saveGamesDoc;
             saveGamesDoc.LinkEndChild(m_pGameSaveMgr->ToXml());
@@ -512,7 +516,7 @@ bool BaseGameLogic::VLoadScoreScreen(const char* xmlScoreScreenResource)
         pScoreRowElem = pScoreRowElem->NextSiblingElement("ScoreRow"))
     {
         std::string treasureTypeStr;
-        assert(ParseAttributeFromXmlElem(&treasureTypeStr, "Treasure", pScoreRowElem));
+        DO_AND_CHECK(ParseAttributeFromXmlElem(&treasureTypeStr, "Treasure", pScoreRowElem));
 
         int pickedUpCount = 0;
         int totalCount = 0;
@@ -626,8 +630,8 @@ bool BaseGameLogic::VLoadScoreScreen(const char* xmlScoreScreenResource)
         /*LOG("[TOTAL] " + treasureTypeStr + ": " + ToStr(totalCount));
         LOG("[PICKED UP] " + treasureTypeStr + ": " + ToStr(pickedUpCount));*/
 
-        assert(SetTiXmlNodeValue(pScoreRowElem, "ScoreRow.CountOfPickedUpScoreItems", pickedUpCount));
-        assert(SetTiXmlNodeValue(pScoreRowElem, "ScoreRow.CountOfTotalScoreItemsInLevel", totalCount));
+        DO_AND_CHECK(SetTiXmlNodeValue(pScoreRowElem, "ScoreRow.CountOfPickedUpScoreItems", pickedUpCount));
+        DO_AND_CHECK(SetTiXmlNodeValue(pScoreRowElem, "ScoreRow.CountOfTotalScoreItemsInLevel", totalCount));
     }
 
     const CheckpointSave* pStartLevelSave = m_pGameSaveMgr->GetCheckpointSave(finishedLevelNumber, 0);
@@ -637,9 +641,9 @@ bool BaseGameLogic::VLoadScoreScreen(const char* xmlScoreScreenResource)
     int levelScoreCollected = nextLevelCheckpoint.score - startLevelScore;
 
     //<ScorePointsCollectedInLevel>0<ScorePointsCollectedInLevel>
-    assert(SetTiXmlNodeValue(pScoreScreenRootElem, "FinishedLevelScreen.NextLevelNumber", nextLevelNumber));
-    assert(SetTiXmlNodeValue(pScoreScreenRootElem, "FinishedLevelScreen.ScorePointsOnLevelStart", startLevelScore));
-    assert(SetTiXmlNodeValue(pScoreScreenRootElem, "FinishedLevelScreen.ScorePointsCollectedInLevel", levelScoreCollected));
+    DO_AND_CHECK(SetTiXmlNodeValue(pScoreScreenRootElem, "FinishedLevelScreen.NextLevelNumber", nextLevelNumber));
+    DO_AND_CHECK(SetTiXmlNodeValue(pScoreScreenRootElem, "FinishedLevelScreen.ScorePointsOnLevelStart", startLevelScore));
+    DO_AND_CHECK(SetTiXmlNodeValue(pScoreScreenRootElem, "FinishedLevelScreen.ScorePointsCollectedInLevel", levelScoreCollected));
 
     // Load the ScoreScreen
     g_pApp->GetHumanView()->LoadScoreScreen(pScoreScreenRootElem);
@@ -734,7 +738,7 @@ void BaseGameLogic::VOnUpdate(uint32 msDiff)
     // TODO: This is code duplication, should think of better way
     if (!m_bRunning)
     {
-        for (auto pGameView : m_GameViews)
+        for (auto &pGameView : m_GameViews)
         {
             pGameView->VOnUpdate(msDiff);
         }
@@ -835,7 +839,7 @@ void BaseGameLogic::VOnUpdate(uint32 msDiff)
     }
 
     // Update all game views
-    for (auto pGameView : m_GameViews)
+    for (auto &pGameView : m_GameViews)
     {
         pGameView->VOnUpdate(msDiff);
     }
@@ -846,7 +850,7 @@ void BaseGameLogic::VOnUpdate(uint32 msDiff)
     if (msAccumulation >= 5)
     {
         // Update all game actors
-        for (auto actorIter : m_ActorMap)
+        for (auto &actorIter : m_ActorMap)
         {
             actorIter.second->Update(msAccumulation);
         }
@@ -951,7 +955,7 @@ void BaseGameLogic::MoveActorDelegate(IEventDataPtr pEventData)
     StrongActorPtr pActor = MakeStrongPtr(VGetActor(pCastEventData->GetActorId()));
     if (pActor != nullptr)
     {
-        shared_ptr<PositionComponent> pPositionComponent = MakeStrongPtr(pActor->GetComponent<PositionComponent>());
+        shared_ptr<PositionComponent> pPositionComponent = pActor->GetPositionComponent();
         assert(pPositionComponent != nullptr);
 
         pPositionComponent->SetPosition(pCastEventData->GetMove());
@@ -983,7 +987,7 @@ static FixtureType CollisonToFixtureType(CollisionType collisionType)
 // Helper function
 void BaseGameLogic::CreateSinglePhysicsTile(int x, int y, const TileCollisionPrototype& proto)
 {
-    for (auto tileCollisionRect : proto.collisionRectangles)
+    for (const auto &tileCollisionRect : proto.collisionRectangles)
     {
         Point position = Point(x + tileCollisionRect.collisionRect.x,
             y + tileCollisionRect.collisionRect.y);
@@ -1169,10 +1173,16 @@ void BaseGameLogic::WorldFinishedLoadingDelegate(IEventDataPtr pEventData)
 
 StrongActorPtr BaseGameLogic::GetClawActor()
 {
-    for (auto actorIter : m_ActorMap)
+    StrongActorPtr claw = MakeStrongPtr(m_pClawActor);
+    if (claw) {
+        return claw;
+    }
+
+    for (auto &actorIter : m_ActorMap)
     {
         if (actorIter.second->GetName() == "Claw")
         {
+            m_pClawActor = actorIter.second;
             return actorIter.second;
         }
     }
@@ -1183,7 +1193,7 @@ StrongActorPtr BaseGameLogic::GetClawActor()
 StrongActorPtr BaseGameLogic::FindActorByName(const std::string& name, bool bIsUnique)
 {
     StrongActorPtr pFoundActor = nullptr;
-    for (auto actorIter : m_ActorMap)
+    for (auto &actorIter : m_ActorMap)
     {
         if (actorIter.second->GetName() == name)
         {
@@ -1202,7 +1212,7 @@ ActorList BaseGameLogic::FindActorByName(const std::string& name)
 {
     ActorList actorList;
 
-    for (auto actorIter : m_ActorMap)
+    for (auto &actorIter : m_ActorMap)
     {
         if (actorIter.second->GetName() == name)
         {
@@ -1225,9 +1235,9 @@ void BaseGameLogic::UnloadLevel()
     // will arise
     ActorMap actorMapCopy = m_ActorMap;
 
-    for (auto actorIter = actorMapCopy.begin(); actorIter != actorMapCopy.end(); ++actorIter)
+    for (const auto &actor : actorMapCopy)
     {
-        shared_ptr<EventData_Destroy_Actor> pEvent(new EventData_Destroy_Actor((*actorIter).second->GetGUID()));
+        shared_ptr<EventData_Destroy_Actor> pEvent(new EventData_Destroy_Actor(actor.second->GetGUID()));
         IEventMgr::Get()->VTriggerEvent(pEvent);
     }
 
@@ -1247,13 +1257,14 @@ void BaseGameLogic::VResetLevel()
     // Handle all pending events before reset
     IEventMgr::Get()->VUpdate(IEventMgr::kINFINITE);
 
-    for (auto actorIter : m_ActorMap)
+    for (auto &actorIter : m_ActorMap)
     {
         shared_ptr<EventData_Destroy_Actor> pEvent(new EventData_Destroy_Actor(actorIter.second->GetGUID()));
         IEventMgr::Get()->VTriggerEvent(pEvent);
     }
 
     assert(m_ActorMap.empty());
+    assert(m_pClawActor.expired());
 
     // Process any pending events which could have arose from deleting all actors
     IEventMgr::Get()->VUpdate(IEventMgr::kINFINITE);

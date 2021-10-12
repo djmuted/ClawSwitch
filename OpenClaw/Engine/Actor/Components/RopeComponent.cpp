@@ -237,8 +237,7 @@ void RopeComponent::VOnAnimationFrameChanged(Animation* pAnimation, AnimationFra
 
         UpdateAttachedActorPosition(newPosition);
 
-        shared_ptr<PhysicsComponent> pRopeActorPhysicsComponent =
-            MakeStrongPtr(m_pAttachedActor->GetComponent<PhysicsComponent>());
+        shared_ptr<PhysicsComponent> pRopeActorPhysicsComponent = m_pAttachedActor->GetPhysicsComponent();
         assert(pRopeActorPhysicsComponent != nullptr);
 
         if (pNewFrame->idx > 60)
@@ -268,6 +267,15 @@ void RopeComponent::VOnActorEnteredTrigger(Actor* pActorWhoEntered, FixtureType 
     {
         return;
     }
+    
+    shared_ptr<HealthComponent> pHealthComponent =
+        MakeStrongPtr(pActorWhoEntered->GetComponent<HealthComponent>(HealthComponent::g_Name));
+     
+    if ((int)pHealthComponent->GetCurrentHealth() <= 0)
+    {
+        return;
+    }
+
 
     assert(m_pAttachedActor == NULL);
     m_pAttachedActor = pActorWhoEntered;

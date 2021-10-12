@@ -15,11 +15,15 @@
         <LogicToActorPrototype logic="SteppingStone2" actorPrototype="ActorPrototype_Level4_SteppingGround" />
         <LogicToActorPrototype logic="SteppingStone3" actorPrototype="ActorPrototype_Level4_SteppingGround" />
         <LogicToActorPrototype logic="SteppingStone4" actorPrototype="ActorPrototype_Level4_SteppingGround" />
+        <LogicToActorPrototype logic="FloorSpike" actorPrototype="ActorPrototype_Level4_FloorSpike" />
+        <LogicToActorPrototype logic="FloorSpike2" actorPrototype="ActorPrototype_Level4_FloorSpike" />
+        <LogicToActorPrototype logic="FloorSpike3" actorPrototype="ActorPrototype_Level4_FloorSpike" />
+        <LogicToActorPrototype logic="FloorSpike4" actorPrototype="ActorPrototype_Level4_FloorSpike" />
     </LogicsToActorPrototypes>
     <ClawSpawnPositions>
         <ClawSpawnPosition spawnNumber="0" x="1439" y="4760" />
-        <ClawSpawnPosition spawnNumber="1" x="9300" y="4248" />
-        <ClawSpawnPosition spawnNumber="2" x="7081" y="5254" />
+        <ClawSpawnPosition spawnNumber="1" x="7081" y="5254" />
+        <ClawSpawnPosition spawnNumber="2" x="9300" y="4248" />
     </ClawSpawnPositions>
     <TopLadderEnds>
         <TopLadderEnd tileId="181" offsetX="0" offsetY="7" />

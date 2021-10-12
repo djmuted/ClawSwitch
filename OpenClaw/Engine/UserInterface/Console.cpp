@@ -366,6 +366,10 @@ Console::~Console()
         SDL_DestroyTexture(_backgroundTexture);
         _backgroundTexture = NULL;
     }
+    if (_font) {
+        TTF_CloseFont(_font);
+        _font = nullptr;
+    }
 }
 
 //################# INTERFACE #####################
@@ -600,7 +604,6 @@ void Console::RenderBackground(SDL_Renderer* renderer)
 
 void Console::RenderCommandHistory(SDL_Renderer* renderer)
 {
-    SDL_Rect intersect;
     SDL_Rect consoleRect = GetRenderRect();
     // Render all visible console lines
     for (auto consoleLine : _consoleTextLines)
@@ -609,7 +612,7 @@ void Console::RenderCommandHistory(SDL_Renderer* renderer)
         SDL_Rect lineRect = consoleLine.GetRenderRect();
         //PrintRect(consoleRect, "ConsoleRect");
         //PrintRect(lineRect, "LineRect");
-        if (SDL_IntersectRect(&consoleRect, &lineRect, &intersect))
+        if (SDL_HasIntersection(&consoleRect, &lineRect))
         {
             //cout << "Rendering.." << endl;
             consoleLine.Render(renderer, _x, _y +(int16_t)_animationOffsetY);

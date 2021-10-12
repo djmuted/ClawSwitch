@@ -1,8 +1,8 @@
 <Configuration>
   <Display>
-    <Size width="1920" height="1080" />
-    <Scale>2</Scale>
-    <UseVerticalSync>true</UseVerticalSync>
+    <Size width="1600" height="1200" />
+    <Scale>1</Scale>
+    <UseVerticalSync>false</UseVerticalSync>
     <IsFullscreen>false</IsFullscreen>
     <IsFullscreenDesktop>false</IsFullscreenDesktop>
   </Display>
@@ -11,10 +11,10 @@
     <SoundChannels>1</SoundChannels>
     <MixingChannels>64</MixingChannels>
     <ChunkSize>2048</ChunkSize>
-    <SoundVolume>30</SoundVolume>
+    <SoundVolume>10</SoundVolume>
     <MusicVolume>7</MusicVolume>
     <SoundOn>true</SoundOn>
-    <MusicOn>true</MusicOn>
+    <MusicOn>false</MusicOn>
     <MusicRpcServerPath>MidiProc.exe</MusicRpcServerPath>
   </Audio>
   <Font>
@@ -22,11 +22,11 @@
     <ConsoleFont font="clacon.ttf" size="20" />
   </Font>
   <Assets>
-    <AssetsFolder>/switch/claw/</AssetsFolder>
+    <AssetsFolder></AssetsFolder>
     <RezArchive>CLAW.REZ</RezArchive>
     <CustomArchive>ASSETS.ZIP</CustomArchive>
-    <ResourceCacheSize>100</ResourceCacheSize>
-    <TempDir>/switch/claw/</TempDir>
+    <ResourceCacheSize>150</ResourceCacheSize>
+    <TempDir></TempDir>
     <SavesFile>SAVES.XML</SavesFile>
   </Assets>
   <Console>
@@ -52,21 +52,32 @@
     <MaxJumpHeight>155</MaxJumpHeight>
     <PowerupMaxJumpHeight>205</PowerupMaxJumpHeight>
     <StartLookUpOrDownTime>1500</StartLookUpOrDownTime>
+    <FreezeTime>2000</FreezeTime>
     <MaxLookUpOrDownDistance>250</MaxLookUpOrDownDistance>
     <LookUpOrDownSpeed>250</LookUpOrDownSpeed>
     <ClawRunningSpeed>4.5</ClawRunningSpeed>
     <SpringBoardSpringHeight>UNUSED</SpringBoardSpringHeight>
     <SpringBoardSpringSpeed>11</SpringBoardSpringSpeed>
-    <UseAlternateControls>false</UseAlternateControls>
     <ClawMinFallHeight>500</ClawMinFallHeight>
-    <LoadAllLevelSaves>false</LoadAllLevelSaves>
-    <ShowFps>false</ShowFps>
-    <ShowPosition>false</ShowPosition>
+    <LoadAllLevelSaves>true</LoadAllLevelSaves>
+    <ShowFps>true</ShowFps>
+    <ShowPosition>true</ShowPosition>
   </GlobalOptions>
+  <ControlOptions>
+    <UseAlternateControls>false</UseAlternateControls>
+    <TouchScreen>
+      <Enable>true</Enable>
+      <!-- Distance to make a decision (separate tap/press and move events) -->
+      <!-- Range value 0..1 where 1 is screen width/height -->
+      <DistanceThreshold>0.05</DistanceThreshold>
+      <!-- How long make a decision in ms (separate short tap and long press) -->
+      <TimeThreshold>100</TimeThreshold>
+    </TouchScreen>
+  </ControlOptions>
   <DebugOptions>
     <SkipMenu>false</SkipMenu>
-    <SkipMenuToLevel>11</SkipMenuToLevel>
-    <LastImplementedLevel>11</LastImplementedLevel>
+    <SkipMenuToLevel>13</SkipMenuToLevel>
+    <LastImplementedLevel>13</LastImplementedLevel>
     <SkipBossFightIntro>false</SkipBossFightIntro>
     <CpuDelay>0</CpuDelay>
   </DebugOptions>

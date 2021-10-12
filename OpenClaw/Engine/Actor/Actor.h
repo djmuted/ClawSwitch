@@ -13,6 +13,7 @@
 typedef std::map<uint32, StrongActorComponentPtr> ActorComponentsMap;
 
 class PositionComponent;
+class PhysicsComponent;
 class TiXmlElement;
 class Actor
 {
@@ -29,7 +30,7 @@ public:
     std::string ToXML();
 
     inline uint32_t GetGUID() const { return _GUID; }
-    inline std::string GetName() const { return _name; }
+    inline const std::string& GetName() const { return _name; }
 
     // Retrieves component from given ID or NULL if component not found
     template <class ComponentType>
@@ -69,19 +70,7 @@ public:
     template <class ComponentType>
     weak_ptr<ComponentType> GetComponent()
     {
-        uint32 id = ActorComponent::GetIdFromName(ComponentType::g_Name);
-        ActorComponentsMap::iterator findIter = _components.find(id);
-        if (findIter != _components.end())
-        {
-            StrongActorComponentPtr base(findIter->second);
-            shared_ptr<ComponentType> sub(static_pointer_cast<ComponentType>(base));  // cast to subclass version of the pointer
-            weak_ptr<ComponentType> weakSub(sub);  // convert strong pointer to weak pointer
-            return weakSub;  // return the weak pointer
-        }
-        else
-        {
-            return weak_ptr<ComponentType>();
-        }
+        return GetComponent<ComponentType>(ComponentType::g_Name);
     }
 
     template <class ComponentType>
@@ -116,6 +105,7 @@ public:
     //=========================================================================
 
     inline shared_ptr<PositionComponent> GetPositionComponent() { return m_pPositionComponent; }
+    inline shared_ptr<PhysicsComponent> GetPhysicsComponent() { return m_pPhysicsComponent; }
 
 private:
     friend class ActorFactory;
@@ -129,6 +119,7 @@ private:
     std::string _resource;
 
     shared_ptr<PositionComponent> m_pPositionComponent;
+    shared_ptr<PhysicsComponent> m_pPhysicsComponent; // Cached because physics objects sync every frame
 };
 
 #endif

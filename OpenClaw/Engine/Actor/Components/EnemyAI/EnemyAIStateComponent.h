@@ -29,6 +29,7 @@ enum EnemyAIState
     EnemyAIState_BrainGabriel,
     EnemyAIState_BrainMarrow,
     EnemyAIState_BrainMarrowParrot,
+    EnemyAIState_BrainAquatis,
 };
 
 struct EnemyAIAction
@@ -87,7 +88,7 @@ class ActorRenderComponent;
 class BaseEnemyAIStateComponent : public ActorComponent
 {
 public:
-    BaseEnemyAIStateComponent(std::string stateName);
+    BaseEnemyAIStateComponent(const std::string &stateName);
     virtual ~BaseEnemyAIStateComponent() { }
 
     static const char* g_Name;
@@ -226,7 +227,7 @@ public:
 
 private:
     void CalculatePatrolBorders();
-    double FindClosestHole(Point center, int height, float maxSearchDistance);
+    double FindClosestHole(const Point &center, int height, float maxSearchDistance);
     void ChangeDirection(Direction newDirection);
     void CommenceIdleBehaviour();
     bool TryChaseEnemy();
@@ -368,7 +369,7 @@ typedef std::vector<std::shared_ptr<EnemyAttackAction>> AttackActionList;
 class BaseAttackAIStateComponent : public BaseEnemyAIStateComponent, public AnimationObserver
 {
 public:
-    BaseAttackAIStateComponent(std::string stateName);
+    BaseAttackAIStateComponent(const std::string &stateName);
     virtual ~BaseAttackAIStateComponent();
 
     static const char* g_Name;

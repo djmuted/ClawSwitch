@@ -23,37 +23,34 @@ Animation::~Animation()
     _animationFrames.clear();
 }
 
-Animation* Animation::CreateAnimation(WapAni* wapAni, const char* animationName, const char* resourcePath, AnimationComponent* owner)
+std::shared_ptr<Animation> Animation::CreateAnimation(WapAni* wapAni, const char* animationName, const char* resourcePath, AnimationComponent* owner)
 {
-    Animation* animation = new Animation();
+    std::shared_ptr<Animation> animation{new Animation()};
     if (!animation->Initialize(wapAni, animationName, resourcePath, owner))
     {
-        delete animation;
-        return NULL;
+        return nullptr;
     }
 
     return animation;
 }
 
-Animation* Animation::CreateAnimation(std::vector<AnimationFrame> animFrames, const char* animName, AnimationComponent* owner)
+std::shared_ptr<Animation> Animation::CreateAnimation(const std::vector<AnimationFrame> &animFrames, const char* animName, AnimationComponent* owner)
 {
-    Animation* animation = new Animation();
+    std::shared_ptr<Animation> animation{new Animation()};
     if (!animation->Initialize(animFrames, animName, owner))
     {
-        delete animation;
-        return NULL;
+        return nullptr;
     }
 
     return animation;
 }
 
-Animation* Animation::CreateAnimation(int numAnimFrames, int animFrameTime, const char* animName, AnimationComponent* owner)
+std::shared_ptr<Animation> Animation::CreateAnimation(int numAnimFrames, int animFrameTime, const char* animName, AnimationComponent* owner)
 {
-    Animation* animation = new Animation();
+    std::shared_ptr<Animation> animation{new Animation()};
     if (!animation->Initialize(numAnimFrames, animFrameTime, animName, owner))
     {
-        delete animation;
-        return NULL;
+        return nullptr;
     }
 
     return animation;
@@ -67,6 +64,7 @@ bool Animation::Initialize(WapAni* wapAni, const char* animationName, const char
     // Load animation frame from WapAni
     uint32 numAnimFrames = wapAni->animationFramesCount;
     AniAnimationFrame* aniAnimFrames = wapAni->animationFrames;
+    _animationFrames.reserve(numAnimFrames);
     for (uint32 frameIdx = 0; frameIdx < numAnimFrames; ++frameIdx)
     {
         AnimationFrame animFrame;
@@ -137,7 +135,7 @@ bool Animation::Initialize(WapAni* wapAni, const char* animationName, const char
     return true;
 }
 
-bool Animation::Initialize(std::vector<AnimationFrame> animFrames, const char* animationName, AnimationComponent* owner)
+bool Animation::Initialize(const std::vector<AnimationFrame> &animFrames, const char* animationName, AnimationComponent* owner)
 {
     if (animFrames.empty())
     {
@@ -156,6 +154,7 @@ bool Animation::Initialize(std::vector<AnimationFrame> animFrames, const char* a
 
 bool Animation::Initialize(int numAnimFrames, int animFrameTime, const char* animName, AnimationComponent* owner)
 {
+    _animationFrames.reserve(numAnimFrames);
     for (int frameIdx = 0; frameIdx < numAnimFrames; ++frameIdx)
     {
         AnimationFrame animFrame;

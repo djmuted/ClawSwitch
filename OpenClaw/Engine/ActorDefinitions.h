@@ -2,59 +2,7 @@
 #define __ACTOR_DEFINITIONS_H__
 
 #include "Interfaces.h"
-
-#ifndef cond_assert
-#define cond_assert(enabled, body) { if (enabled) { assert(body); } else { body; } }
-#endif
-
-//---------------------------------------------------------------------------------------------------------------------
-// This class represents a single point in 2D space
-//---------------------------------------------------------------------------------------------------------------------
-class Point
-{
-public:
-    double x, y;
-
-    // construction
-    Point(void) { x = y = 0; }
-    Point(const double newX, const double newY) { x = newX; y = newY; }
-    Point(const Point& newPoint) { x = newPoint.x; y = newPoint.y; }
-    Point(const Point* pNewPoint) { x = pNewPoint->x; y = pNewPoint->y; }
-
-    // assignment
-    Point& operator=(const Point& newPoint) { x = newPoint.x; y = newPoint.y; return (*this); }
-    Point& operator=(const Point* pNewPoint) { x = pNewPoint->x; y = pNewPoint->y; return (*this); }
-
-    // addition/subtraction
-    Point& operator+=(const Point& newPoint) { x += newPoint.x; y += newPoint.y; return (*this); }
-    Point& operator-=(const Point& newPoint) { x -= newPoint.x; y -= newPoint.y; return (*this); }
-    Point& operator+=(const Point* pNewPoint) { x += pNewPoint->x; y += pNewPoint->y; return (*this); }
-    Point& operator-=(const Point* pNewPoint) { x -= pNewPoint->x; y -= pNewPoint->y; return (*this); }
-    Point operator+(const Point& other) { Point temp(this); temp += other; return temp; }
-    Point operator-(const Point& other) { Point temp(this); temp -= other; return temp; }
-
-    // comparison
-    bool operator==(const Point& other) const { return ((x == other.x) && (y == other.y)); }
-    bool operator!=(const Point& other) const { return (!((x == other.x) && (y == other.y))); }
-
-    // accessors (needed for Lua)
-    double GetX() const { return x; }
-    double GetY() const { return y; }
-    void SetX(const double newX) { x = newX; }
-    void SetY(const double newY) { y = newY; }
-    void Set(const double newX, const double newY) { x = newX; y = newY; }
-
-    // somewhat hacky vector emulation (maybe I should just write my own vector class)
-    float Length() const { return sqrt((float)(x*x + y*y)); }
-
-    bool IsZero() { return (std::fabs(x) < DBL_EPSILON || std::fabs(y) < DBL_EPSILON); }
-    bool IsZeroXY() { return (std::fabs(x) < DBL_EPSILON && std::fabs(y) < DBL_EPSILON); }
-
-    std::string ToString() { return ("[X: " + ToStr(x) + ", Y: " + ToStr(y) + "]"); }
-};
-
-inline Point operator-(const Point& left, const Point& right) { Point temp(left); temp -= right; return temp; }
-inline Point operator+(const Point& left, const Point& right) { Point temp(left); temp += right; return temp; }
+#include "Util/Point.h"
 
 //-------------------------------------------------------------------------------------------------
 // ActorFixtureDef - Physics
@@ -501,7 +449,7 @@ struct ElevatorStepDef
         return def;
     }
 
-    TiXmlElement* ToXml()
+    TiXmlElement* ToXml() const
     {
         TiXmlElement* pElevatorStepElem = new TiXmlElement("ElevatorStep");
 
@@ -591,58 +539,6 @@ struct PathElevatorDef
 
     double speed;
     std::vector<ElevatorStepDef> elevatorPath;
-};
-
-//-------------------------------------------------------------------------------------------------
-// FloorSpikeDef - FloorSpikeComponent
-//-------------------------------------------------------------------------------------------------
-
-struct FloorSpikeDef
-{
-    FloorSpikeDef()
-    {
-        activeFrameIdx = 0;
-        damage = 0;
-        damagePulseInterval = 0;
-        cycleDuration = 0;
-        startDelay = 0;
-        timeOn = 0;
-    }
-
-    static FloorSpikeDef CreateFromXml(TiXmlElement* pElem, bool strict)
-    {
-        FloorSpikeDef def;
-        def.LoadFromXml(pElem, strict);
-        return def;
-    }
-
-    TiXmlElement* ToXml()
-    {
-        assert(false);
-        return NULL;
-    }
-
-    void LoadFromXml(TiXmlElement* pElem, bool strict)
-    {
-        assert(pElem != NULL);
-
-        cond_assert(strict, ParseValueFromXmlElem(&activeFrameIdx, pElem->FirstChildElement("ActiveFrameIdx")));
-        cond_assert(strict, ParseValueFromXmlElem(&damage, pElem->FirstChildElement("Damage")));
-        cond_assert(strict, ParseValueFromXmlElem(&damagePulseInterval, pElem->FirstChildElement("DamagePulseInterval")));
-        cond_assert(strict, ParseValueFromXmlElem(&cycleDuration, pElem->FirstChildElement("CycleDuration")));
-        cond_assert(strict, ParseValueFromXmlElem(&startDelay, pElem->FirstChildElement("StartDelay")));
-        cond_assert(strict, ParseValueFromXmlElem(&activateSound, pElem->FirstChildElement("ActivateSound")));
-        cond_assert(strict, ParseValueFromXmlElem(&deactivateSound, pElem->FirstChildElement("DeactivateSound")));
-    }
-
-    int activeFrameIdx;
-    int timeOn;
-    int damage;
-    int damagePulseInterval;
-    int cycleDuration;
-    int startDelay;
-    std::string activateSound;
-    std::string deactivateSound;
 };
 
 //-------------------------------------------------------------------------------------------------

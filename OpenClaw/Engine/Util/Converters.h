@@ -19,9 +19,7 @@ TiXmlElement* WwdToXml(WapWwd* wapWwd, int levelNumber);
 
 #define INSERT_POSITION_COMPONENT(x, y, rootElem) \
 { \
-   TiXmlElement* elem = new TiXmlElement("PositionComponent"); \
-   rootElem->LinkEndChild(elem); \
-   XML_ADD_2_PARAM_ELEMENT("Position", "x", x, "y", y, elem); \
+   rootElem->LinkEndChild(CreatePositionComponent(x, y)); \
 } \
 
 #define INSERT_COLLISION_COMPONENT(width, height, rootElem) \
@@ -87,13 +85,14 @@ inline TiXmlElement* CreateActorRenderComponent(const char* imagesPath, int32 zC
 
     XML_ADD_TEXT_ELEMENT("ImagePath", imagesPath, elem);
     XML_ADD_TEXT_ELEMENT("ZCoord", ToStr(zCoord).c_str(), elem);
+    XML_ADD_TEXT_ELEMENT("Visible", ToStr(visible).c_str(), elem);
 
     return elem;
 }
 
 //=====================================================================================================================
 
-inline TiXmlElement* CreateAnimationComponent(std::string aniPath)
+inline TiXmlElement* CreateAnimationComponent(const std::string &aniPath)
 {
     TiXmlElement* animationComponent = new TiXmlElement("AnimationComponent");
     XML_ADD_TEXT_ELEMENT("AnimationPath", aniPath.c_str(), animationComponent);
@@ -244,7 +243,8 @@ inline TiXmlElement* WwdObjectToXml(WwdObject* wwdObject, std::string& imagesRoo
     }
 
     // Level 9 and 10 SHOOTERS_PUFFDARTLEFT is screwed
-    if ((levelNumber == 9 || levelNumber == 10) && tmpImageSet.find("SHOOTERS") != std::string::npos)
+    if ((levelNumber == 9 || levelNumber == 10 || levelNumber == 13) &&
+            tmpImageSet.find("SHOOTERS") != std::string::npos)
     {
         std::replace(tmpImageSet.begin(), tmpImageSet.end(), '_', '/');
     }
@@ -276,6 +276,11 @@ inline TiXmlElement* WwdObjectToXml(WwdObject* wwdObject, std::string& imagesRoo
     xmlOverrideList.push_back(XmlNodeOverride("Actor.ActorRenderComponent.ZCoord", wwdObject->z));
     xmlOverrideList.push_back(XmlNodeOverride("Actor.PositionComponent.Position", "x", actorPosition.x, "y", actorPosition.y));
 
+    if (actorProto == ActorPrototype_Null)
+    {
+        return ActorTemplates::CreateXmlData_Actor(actorProto, xmlOverrideList);
+    }
+
     //LOG("Logic: " + logic);
     if (logic.find("AmbientSound") != std::string::npos)
     {
@@ -303,6 +308,13 @@ inline TiXmlElement* WwdObjectToXml(WwdObject* wwdObject, std::string& imagesRoo
             if ((levelNumber == 1 || levelNumber == 2 || levelNumber == 3 || levelNumber == 4) && !isLooping)
             {
                 //soundVolume = (int)((float)soundVolume / 1.5f);
+            }
+            if (levelNumber == 13)
+            {
+                if (sound == "LEVEL_TRIGGER_BIRDSCALL5")
+                {
+                    sound = "/LEVEL13/SOUNDS/TRIGGER/BIRDCALL5.WAV";
+                }
             }
 
             SAFE_DELETE(pActorElem);
@@ -416,6 +428,17 @@ inline TiXmlElement* WwdObjectToXml(WwdObject* wwdObject, std::string& imagesRoo
             if ((levelNumber == 3) && (sound == "LEVEL_TRIGGER_1013"))
             {
                 sound = "/LEVEL10/SOUNDS/TRIGGER/1013.WAV";
+            }
+            if ((levelNumber == 12))
+            {
+                if (sound == "LEVEL_TRIGGER_1044")
+                {
+                    sound = "/LEVEL11/SOUNDS/TRIGGER/1044.WAV";
+                } 
+                else if (sound == "LEVEL_TRIGGER_1005")
+                {
+                    sound = "/LEVEL11/SOUNDS/TRIGGER/1005.WAV";
+                }
             }
 
             SAFE_DELETE(pActorElem);
@@ -682,6 +705,7 @@ inline TiXmlElement* WwdObjectToXml(WwdObject* wwdObject, std::string& imagesRoo
 
         int numCrabs = wwdObject->userValue1;
         std::vector<ActorSpawnInfo> spawnedActorInfoList;
+        spawnedActorInfoList.reserve(numCrabs);
         for (int i = 0; i < numCrabs; i++)
         {
             ActorSpawnInfo actorSpawnInfo;
@@ -721,7 +745,8 @@ inline TiXmlElement* WwdObjectToXml(WwdObject* wwdObject, std::string& imagesRoo
              logic == "Marrow" ||
              logic == "Mercat" ||
              logic == "Siren" ||
-             logic == "Fish")
+             logic == "Fish" ||
+             logic == "Aquatis")
     {
         SAFE_DELETE(pActorElem);
         if (actorProto == ActorPrototype_None)
@@ -771,15 +796,28 @@ inline TiXmlElement* WwdObjectToXml(WwdObject* wwdObject, std::string& imagesRoo
     }
     else if (logic.find("CannonButton") != std::string::npos)
     {
+        SAFE_DELETE(pActorElem);
         return ActorTemplates::CreateXmlData_Actor(ActorPrototype_Level8_GabrielButton, actorPosition);
     }
     else if (logic.find("GabrielCannon") != std::string::npos)
     {
+        SAFE_DELETE(pActorElem);
         return ActorTemplates::CreateXmlData_Actor(ActorPrototype_Level8_GabrielCannon, actorPosition);
+    }
+    else if (logic.find("Laser") != std::string::npos)
+    {
+        SAFE_DELETE(pActorElem);
+        return NULL; // TODO
     }
     else if (logic.find("Gabriel") != std::string::npos)
     {
+        SAFE_DELETE(pActorElem);
         return ActorTemplates::CreateXmlData_Actor(ActorPrototype_Level8_Gabriel, actorPosition);
+    }
+    else if (logic.find("AquatisCrack") != std::string::npos)
+    {
+        SAFE_DELETE(pActorElem);
+        return NULL; // TODO
     }
     else if (logic.find("Rat") != std::string::npos)
     {
@@ -967,11 +1005,9 @@ inline TiXmlElement* WwdObjectToXml(WwdObject* wwdObject, std::string& imagesRoo
             pathElevatorDef.speed = 125;
         }
 
-        assert(pathElevatorDef.elevatorPath.size() >= 2);
+        assert(pathElevatorDef.elevatorPath.size() >= 1);
 
         Point position(wwdObject->x, wwdObject->y);
-
-        SAFE_DELETE(pActorElem);
 
         return ActorTemplates::CreateXmlData_PathElevator(
             actorProto,
@@ -981,23 +1017,28 @@ inline TiXmlElement* WwdObjectToXml(WwdObject* wwdObject, std::string& imagesRoo
     }
     else if (logic.find("FloorSpike") != std::string::npos)
     {
-        // This should be moved to separate actor protos....
-        int delay = 0;
+        SAFE_DELETE(pActorElem);
+        if (actorProto == ActorPrototype_None)
+        {
+            return NULL;
+        }
+
+        int logicNumber = 0;
         if (logic == "FloorSpike")
         {
-            delay = 0;
+            logicNumber = 0;
         }
         else if (logic == "FloorSpike2")
         {
-            delay = 750;
+            logicNumber = 1;
         }
         else if (logic == "FloorSpike3")
         {
-            delay = 1500;
+            logicNumber = 2;
         }
         else if (logic == "FloorSpike4")
         {
-            delay = 2250;
+            logicNumber = 3;
         }
         else
         {
@@ -1005,40 +1046,18 @@ inline TiXmlElement* WwdObjectToXml(WwdObject* wwdObject, std::string& imagesRoo
             assert(false && "Unknown floor spike");
         }
 
-        ActorPrototype proto = ActorPrototype_BaseFloorSpike;
-        Point position(wwdObject->x, wwdObject->y);
+        const int defaultFullCycleTime = 3000; // TimeOn + TimeOff from configs
+        const int defaultDelay = defaultFullCycleTime / 4 * logicNumber;
 
-        // TODO: Make specific actor prototypes in next level(s)
-        FloorSpikeDef def;
-        if (levelNumber == 3)
-        {
-            def.activeFrameIdx = 5;
-            def.activateSound = "/LEVEL3/SOUNDS/FLOORSPIKEUP.WAV";
-            def.deactivateSound = "/LEVEL3/SOUNDS/FLOORSPIKEDOWN.WAV";
-        }
-        else if (levelNumber == 4)
-        {
-            def.activeFrameIdx = 4;
-            def.activateSound = "/LEVEL4/SOUNDS/FLOORSPIKEUP.WAV";
-            def.deactivateSound = "/LEVEL4/SOUNDS/FLOORSPIKEDOWN.WAV";
-        }
-        else if (levelNumber == 9)
-        {
+        const int startDelay = wwdObject->speed > 0 ? wwdObject->speed : defaultDelay;
+        const int timeOn = wwdObject->speedX > 0 ? wwdObject->speedX : (defaultFullCycleTime / 2);
+        const int timeOff = wwdObject->speedY > 0 ? wwdObject->speedY : (defaultFullCycleTime / 2);
 
-        }
+        xmlOverrideList.push_back(XmlNodeOverride("Actor.FloorSpikeComponent.StartDelay", startDelay));
+        xmlOverrideList.push_back(XmlNodeOverride("Actor.FloorSpikeComponent.TimeOn", timeOn));
+        xmlOverrideList.push_back(XmlNodeOverride("Actor.FloorSpikeComponent.TimeOff", timeOff));
 
-        def.startDelay = delay;
-        def.damage = 5;
-        def.cycleDuration = 75;
-        def.damagePulseInterval = 1000;
-        def.timeOn = 1000;
-
-        SAFE_DELETE(pActorElem);
-        return ActorTemplates::CreateXmlData_FloorSpike(
-            proto,
-            position,
-            tmpImageSet,
-            def);
+        return ActorTemplates::CreateXmlData_Actor(actorProto, xmlOverrideList);
     }
     else if (logic.find("SawBlade") != std::string::npos)
     {
@@ -1122,7 +1141,6 @@ inline TiXmlElement* WwdObjectToXml(WwdObject* wwdObject, std::string& imagesRoo
 
         Point position(wwdObject->x, wwdObject->y);
 
-        SAFE_DELETE(pActorElem);
         return ActorTemplates::CreateXmlData_Actor(actorProto, position);
     }
     else if (logic == "AniRope")
@@ -1170,7 +1188,8 @@ inline TiXmlElement* WwdObjectToXml(WwdObject* wwdObject, std::string& imagesRoo
             def);
     }
     else if (logic == "SpringBoard" ||
-             logic == "GroundBlower")
+             logic == "GroundBlower" ||
+             logic == "WaterRock")
     {
         SAFE_DELETE(pActorElem);
         if (actorProto == ActorPrototype_None)
@@ -1182,13 +1201,11 @@ inline TiXmlElement* WwdObjectToXml(WwdObject* wwdObject, std::string& imagesRoo
 
         SpringBoardDef def;
         def.springHeight = wwdObject->maxY;
-        //LOG("Position: " + position.ToString() + ", SpringHeight: " + ToStr(def.springHeight));
+        LOG("Position: " + position.ToString() + ", SpringHeight: " + ToStr(def.springHeight));
         if (def.springHeight == 0)
         {
             def.springHeight = 450;
         }
-
-        SAFE_DELETE(pActorElem);
 
         // Everything should be in XML here
         return ActorTemplates::CreateXmlData_SpringBoard(
@@ -1201,7 +1218,7 @@ inline TiXmlElement* WwdObjectToXml(WwdObject* wwdObject, std::string& imagesRoo
         static std::vector<std::string> s_ReportedUnknownLogicsList;
 
         bool isAlreadyReported = false;
-        for (std::string unkLogic : s_ReportedUnknownLogicsList)
+        for (std::string &unkLogic : s_ReportedUnknownLogicsList)
         {
             if (unkLogic == logic)
             {
@@ -1255,7 +1272,7 @@ inline TiXmlElement* CreateClawActor(WapWwd* pWapWwd)
     pClawActor->LinkEndChild(CreatePhysicsComponent(true, false, true, g_pApp->GetGlobalOptions()->maxJumpHeight, 40, 90, 4.0, 0.0, 0.5));
     pClawActor->LinkEndChild(CreateControllableComponent(true));
     pClawActor->LinkEndChild(CreateAnimationComponent("/CLAW/ANIS/*"));
-    pClawActor->LinkEndChild(CreateActorRenderComponent("/CLAW/IMAGES/*", 4000));
+    pClawActor->LinkEndChild(CreateActorRenderComponent("/CLAW/IMAGES/*", (int32) zIndexes::ClawActor));
     pClawActor->LinkEndChild(ActorTemplates::CreateFollowableComponent(Point(-5, -80), "/GAME/IMAGES/EXCLAMATION/*", ""));
 
     TiXmlElement* pScoreComponent = new TiXmlElement("ScoreComponent");
@@ -1287,7 +1304,9 @@ inline TiXmlElement* CreateClawActor(WapWwd* pWapWwd)
 // HUD to Xml
 //=====================================================================================================================
 
-inline TiXmlElement* CreateHUDElement(std::string pathToImages, int animFrameDuration, std::string animPath, Point position, bool anchorRight, bool anchorBottom, std::string key, bool visible = true)
+inline TiXmlElement* CreateHUDElement(const std::string &pathToImages, int animFrameDuration, const std::string &animPath,
+                 const Point &position, bool anchorRight, bool anchorBottom,
+                 const std::string &key, bool visible = true)
 {
     TiXmlElement* pHUDElement = new TiXmlElement("Actor");
     pHUDElement->SetAttribute("Type", pathToImages.c_str());

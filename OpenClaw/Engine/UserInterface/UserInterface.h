@@ -7,35 +7,35 @@
 #include "../Events/EventMgr.h"
 #include <SDL2/SDL.h>
 
-#define JOY_A     0
-#define JOY_B     1
-#define JOY_X     2
-#define JOY_Y     3
+#define JOY_A 0
+#define JOY_B 1
+#define JOY_X 2
+#define JOY_Y 3
 #define JOY_MINUS 11
-#define JOY_LEFT  12
-#define JOY_UP    13
+#define JOY_LEFT 12
+#define JOY_UP 13
 #define JOY_RIGHT 14
-#define JOY_DOWN  15
+#define JOY_DOWN 15
 
 // Doesnt really do anything, just implementation of empty methods to conform to
 // IScreenElement interface
 class ScreenElementScene : public IScreenElement, public Scene
 {
 public:
-    ScreenElementScene(SDL_Renderer* pRenderer) : Scene(pRenderer) { }
-    virtual ~ScreenElementScene() { }
+    ScreenElementScene(SDL_Renderer *pRenderer) : Scene(pRenderer) {}
+    virtual ~ScreenElementScene() {}
 
     // IScreenElement implementation
-    virtual void VOnLostDevice() { }
+    virtual void VOnLostDevice() {}
     virtual void VOnUpdate(uint32 msDiff) { OnUpdate(msDiff); }
     virtual void VOnRender(uint32 msDiff) { OnRender(); }
 
     virtual int32 VGetZOrder() const { return 0; }
-    virtual void VSetZOrder(int32 const zOrder) { }
+    virtual void VSetZOrder(int32 const zOrder) {}
     virtual bool VIsVisible() { return true; }
-    virtual void VSetVisible(bool visible) { }
+    virtual void VSetVisible(bool visible) {}
 
-    virtual bool VOnEvent(SDL_Event& evt) { return false; }
+    virtual bool VOnEvent(SDL_Event &evt) { return false; }
 };
 
 // These are PAGES - they define what buttons are present in given page
@@ -48,19 +48,22 @@ enum MenuPage
 
     // Pages accessible from MenuPage_Main
     MenuPage_SinglePlayer,
-    MenuPage_Multiplayer,                  // Unused
-    MenuPage_ReplayMovies,                 // Unused
-    MenuPage_Options, 
-    MenuPage_Credits,                      
-    MenuPage_Help,                         
-    MenuPage_QuitGame,                         
-    
+    MenuPage_Multiplayer,  // Unused
+    MenuPage_ReplayMovies, // Unused
+    MenuPage_Options,
+    MenuPage_Credits,
+    MenuPage_Help,
+    MenuPage_QuitGame,
+
+    // Pages accessible from MenuPage_Help
+    MenuPage_Help_TouchScreen,
+
     // Pages accessible from MenuPage_SinglePlayer
     MenuPage_SinglePlayer_NewGame,
     MenuPage_SinglePlayer_LoadGame,
     MenuPage_SinglePlayer_LoadCustomLevel, // Unused
     MenuPage_SinglePlayer_SaveGame,        // Unused
-    MenuPage_SinglePlayer_UploadScores,     // Unused
+    MenuPage_SinglePlayer_UploadScores,    // Unused
 
     MenuPage_SinglePlayer_LoadGame_Level1,
     MenuPage_SinglePlayer_LoadGame_Level2,
@@ -132,22 +135,22 @@ typedef std::map<MenuPage, shared_ptr<ScreenElementMenuPage>> MenuPageMap;
 class ScreenElementMenu : public IScreenElement
 {
 public:
-    ScreenElementMenu(SDL_Renderer* pRenderer);
+    ScreenElementMenu(SDL_Renderer *pRenderer);
     virtual ~ScreenElementMenu();
 
     // IScreenElement implementation
-    virtual void VOnLostDevice() { }
+    virtual void VOnLostDevice() {}
     virtual void VOnUpdate(uint32 msDiff);
     virtual void VOnRender(uint32 msDiff);
 
     virtual int32 VGetZOrder() const { return 20000; }
-    virtual void VSetZOrder(int32 const zOrder) { }
+    virtual void VSetZOrder(int32 const zOrder) {}
     virtual bool VIsVisible() override { return m_bIsVisible; }
     virtual void VSetVisible(bool visible) override;
 
-    virtual bool VOnEvent(SDL_Event& evt);
+    virtual bool VOnEvent(SDL_Event &evt);
 
-    bool Initialize(TiXmlElement* pElem);
+    bool Initialize(TiXmlElement *pElem);
 
 private:
     void SwitchPageDelegate(IEventDataPtr pEventData);
@@ -165,7 +168,7 @@ private:
     std::string m_MenuEnterSound;
 
     shared_ptr<Image> m_pBackground;
-    SDL_Renderer* m_pRenderer;
+    SDL_Renderer *m_pRenderer;
 
     MenuPageMap m_MenuPageMap;
     shared_ptr<ScreenElementMenuPage> m_pActiveMenuPage;
@@ -180,22 +183,22 @@ typedef std::map<SDL_Keycode, IEventDataPtr> KeyToEventMap;
 class ScreenElementMenuPage : public IScreenElement
 {
 public:
-    ScreenElementMenuPage(SDL_Renderer* pRenderer);
+    ScreenElementMenuPage(SDL_Renderer *pRenderer);
     virtual ~ScreenElementMenuPage();
 
     // IScreenElement implementation
-    virtual void VOnLostDevice() { }
+    virtual void VOnLostDevice() {}
     virtual void VOnUpdate(uint32 msDiff);
     virtual void VOnRender(uint32 msDiff);
 
     virtual int32 VGetZOrder() const { return 0; }
-    virtual void VSetZOrder(int32 const zOrder) { }
+    virtual void VSetZOrder(int32 const zOrder) {}
     virtual bool VIsVisible() { return true; }
-    virtual void VSetVisible(bool visible) { }
+    virtual void VSetVisible(bool visible) {}
 
-    virtual bool VOnEvent(SDL_Event& evt);
+    virtual bool VOnEvent(SDL_Event &evt);
 
-    bool Initialize(TiXmlElement* pElem);
+    bool Initialize(TiXmlElement *pElem);
 
     void OnPageLoaded();
 
@@ -213,7 +216,7 @@ private:
     MenuItemList m_MenuItems;
 
     shared_ptr<Image> m_pBackground;
-    SDL_Renderer* m_pRenderer;
+    SDL_Renderer *m_pRenderer;
 };
 
 enum MenuItemType
@@ -265,22 +268,22 @@ class ScreenElementMenuItem : public IScreenElement
     //typedef std::vector<shared_ptr<MenuItemImageContainer>> MenuItemImageContainerList;
 
 public:
-    ScreenElementMenuItem(SDL_Renderer* pRenderer);
+    ScreenElementMenuItem(SDL_Renderer *pRenderer);
     virtual ~ScreenElementMenuItem();
 
     // IScreenElement implementation
-    virtual void VOnLostDevice() { }
+    virtual void VOnLostDevice() {}
     virtual void VOnUpdate(uint32 msDiff);
     virtual void VOnRender(uint32 msDiff);
 
     virtual int32 VGetZOrder() const { return 0; }
-    virtual void VSetZOrder(int32 const zOrder) { }
+    virtual void VSetZOrder(int32 const zOrder) {}
     virtual bool VIsVisible() { return m_bVisible; }
     virtual void VSetVisible(bool visible) { m_bVisible = visible; }
 
-    virtual bool VOnEvent(SDL_Event& evt);
+    virtual bool VOnEvent(SDL_Event &evt);
 
-    bool Initialize(TiXmlElement* pElem);
+    bool Initialize(TiXmlElement *pElem);
 
     std::string GetName() const { return m_Name; }
 
@@ -309,7 +312,7 @@ private:
 
     MenuItemImageMap m_Images;
     //MenuItemImageContainerList m_MenuItemImageContainerList;
-    SDL_Renderer* m_pRenderer;
+    SDL_Renderer *m_pRenderer;
 };
 
 #endif

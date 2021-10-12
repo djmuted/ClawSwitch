@@ -13,12 +13,14 @@
 #include <vector>
 #include <assert.h>
 #include "Util/EnumString.h"
+#include "UserInterface/Touch/TouchEvents.h"
+#include "UserInterface/Touch/TouchRecognizers/AbstractRecognizer.h"
 
 class Actor;
 typedef std::shared_ptr<Actor> StrongActorPtr;
 typedef std::weak_ptr<Actor> WeakActorPtr;
 
-typedef std::vector<Actor*> ActorList;
+typedef std::vector<Actor *> ActorList;
 
 class ActorComponent;
 typedef std::shared_ptr<ActorComponent> StrongActorComponentPtr;
@@ -67,29 +69,29 @@ enum CollisionType
 
 enum CollisionFlag
 {
-    CollisionFlag_None                  = 0x0,
-    CollisionFlag_All                   = 0x1,
-    CollisionFlag_Controller            = 0x2,
-    CollisionFlag_DynamicActor          = 0x4,
-    CollisionFlag_Bullet                = 0x8,
-    CollisionFlag_Explosion             = 0x10,
-    CollisionFlag_Magic                 = 0x20,
-    CollisionFlag_Crate                 = 0x40,
-    CollisionFlag_Rope                  = 0x80,
-    CollisionFlag_Solid                 = 0x100,
-    CollisionFlag_Ground                = 0x200,
-    CollisionFlag_Death                 = 0x400,
-    CollisionFlag_Ladder                = 0x800,
-    CollisionFlag_PowderKeg             = 0x1000,
-    CollisionFlag_Trigger               = 0x2000,
-    CollisionFlag_Pickup                = 0x4000,
-    CollisionFlag_Checkpoint            = 0x8000,
-    CollisionFlag_ClawAttack            = 0x10000,
-    CollisionFlag_EnemyAIAttack         = 0x20000,
-    CollisionFlag_EnemyAIProjectile     = 0x40000,
-    CollisionFlag_DamageAura            = 0x80000,
-    CollisionFlag_InvisibleController   = 0x100000,
-    CollisionFlag_RopeSensor            = 0x400000,
+    CollisionFlag_None = 0x0,
+    CollisionFlag_All = 0x1,
+    CollisionFlag_Controller = 0x2,
+    CollisionFlag_DynamicActor = 0x4,
+    CollisionFlag_Bullet = 0x8,
+    CollisionFlag_Explosion = 0x10,
+    CollisionFlag_Magic = 0x20,
+    CollisionFlag_Crate = 0x40,
+    CollisionFlag_Rope = 0x80,
+    CollisionFlag_Solid = 0x100,
+    CollisionFlag_Ground = 0x200,
+    CollisionFlag_Death = 0x400,
+    CollisionFlag_Ladder = 0x800,
+    CollisionFlag_PowderKeg = 0x1000,
+    CollisionFlag_Trigger = 0x2000,
+    CollisionFlag_Pickup = 0x4000,
+    CollisionFlag_Checkpoint = 0x8000,
+    CollisionFlag_ClawAttack = 0x10000,
+    CollisionFlag_EnemyAIAttack = 0x20000,
+    CollisionFlag_EnemyAIProjectile = 0x40000,
+    CollisionFlag_DamageAura = 0x80000,
+    CollisionFlag_InvisibleController = 0x100000,
+    CollisionFlag_RopeSensor = 0x400000,
 };
 
 enum FixtureType
@@ -239,12 +241,15 @@ enum DamageType
     DamageType_DeathTile,
     DamageType_EnemyAura,
     DamageType_GabrielCannonBall,
+    DamageType_Trident,
+    DamageType_SirenProjectile,
     DamageType_Max
 };
 
 enum AnimationType
 {
     AnimationType_Explosion,
+    AnimationType_TridentExplosion,
     AnimationType_RedHitPoint,
     AnimationType_BlueHitPoint,
     AnimationType_TarSplash
@@ -274,6 +279,8 @@ enum ActorPrototype
     ActorPrototype_None = -1,
 
     ActorPrototype_Start,
+
+    ActorPrototype_Null,
 
     //=======================================
     // Level specific
@@ -333,6 +340,7 @@ enum ActorPrototype
     ActorPrototype_Level2_TowerCannonRight,
 
     // Projectiles
+    ActorPrototype_Level1_RatBomb,
     ActorPrototype_Level2_CannonBall,
     ActorPrototype_Level2_RatProjectile,
     ActorPrototype_Level3_RatBomb,
@@ -352,6 +360,12 @@ enum ActorPrototype
     ActorPrototype_Level2_LaRaux,
     ActorPrototype_Level4_Katherine,
     ActorPrototype_Level6_Wolvington,
+
+    // Floor spike
+    ActorPrototype_Level3_FloorSpike,
+    ActorPrototype_Level4_FloorSpike,
+    ActorPrototype_Level12_FloorSpike,
+    ActorPrototype_Level13_FloorSpike,
 
     // Stepping stones
     ActorPrototype_Level4_SteppingGround,
@@ -397,7 +411,7 @@ enum ActorPrototype
     ActorPrototype_BaseFloorSpike,
 
     ActorPrototype_BaseRope,
-    
+
     ActorPrototype_BaseActorSpawner,
 
     // Level 2
@@ -465,7 +479,7 @@ enum ActorPrototype
     ActorPrototype_Level10_MarrowParrot,
     ActorPrototype_Level10_BossGem,
 
-	// Level 11
+    // Level 11
     ActorPrototype_Level11_Mercat,
     ActorPrototype_Level11_Siren,
     ActorPrototype_Level11_Fish,
@@ -475,7 +489,30 @@ enum ActorPrototype
     ActorPrototype_Level11_Laser,
     ActorPrototype_Level11_SirenProjectile,
     ActorPrototype_Level11_TridentProjectile,
-	
+
+    // Level 12
+    ActorPrototype_Level12_Mercat,
+    ActorPrototype_Level12_CrumblingPeg,
+    ActorPrototype_Level12_Siren,
+    ActorPrototype_Level12_Fish,
+    ActorPrototype_Level12_TogglePeg,
+    ActorPrototype_Level12_Aquatis,
+    ActorPrototype_Level12_RockSpring,
+    ActorPrototype_Level12_PathElevator,
+    ActorPrototype_Level12_BossStager,
+    ActorPrototype_Level12_BossGem,
+
+    // Level 13
+    ActorPrototype_Level13_BearSailor,
+    ActorPrototype_Level13_RedTailPirate,
+    ActorPrototype_Level13_WaterRock,
+    ActorPrototype_Level13_SpringBoard,
+    ActorPrototype_Level13_PathElevator,
+    ActorPrototype_Level13_TogglePeg,
+    ActorPrototype_Level13_CrumblingPeg,
+    ActorPrototype_Level13_SteppingGround,
+    ActorPrototype_Level13_PuffDartSpawner,
+
     ActorPrototype_Max
 };
 
@@ -502,7 +539,7 @@ class CameraNode;
 class IGamePhysics
 {
 public:
-    virtual ~IGamePhysics() { }
+    virtual ~IGamePhysics() {}
 
     // Initialization and maintanance of the Physics World
     virtual bool VInitialize() = 0;
@@ -513,35 +550,35 @@ public:
     virtual void VAddCircle(float radius, uint32_t thickness, WeakActorPtr pTargetActor) = 0;
     virtual void VAddRect(uint32_t thickness, WeakActorPtr pTargetActor) = 0;
     virtual void VAddLine(Point from, Point to, uint32_t thickness) = 0;
-    virtual void VAddStaticGeometry(Point position, Point size, CollisionType collisionType, FixtureType fixtureType) = 0;
+    virtual void VAddStaticGeometry(const Point &position, const Point &size, CollisionType collisionType, FixtureType fixtureType) = 0;
     virtual void VAddDynamicActor(WeakActorPtr pActor) = 0;
     virtual void VAddKinematicBody(WeakActorPtr pActor) = 0;
-    virtual void VAddStaticBody(WeakActorPtr pActor, Point bodySize, CollisionType collisionType) = 0;
+    virtual void VAddStaticBody(WeakActorPtr pActor, const Point &bodySize, CollisionType collisionType) = 0;
     virtual void VRemoveActor(uint32_t actorId) = 0;
 
-    virtual void VAddActorBody(const ActorBodyDef* actorBodyDef) = 0;
-    virtual void VAddActorFixtureToBody(uint32_t actorId, const ActorFixtureDef* pFixtureDef) = 0;
+    virtual void VAddActorBody(const ActorBodyDef *actorBodyDef) = 0;
+    virtual void VAddActorFixtureToBody(uint32_t actorId, const ActorFixtureDef *pFixtureDef) = 0;
 
     // Debugging
-    virtual void VRenderDiagnostics(SDL_Renderer* pRenderer, std::shared_ptr<CameraNode> pCamera) = 0;
+    virtual void VRenderDiagnostics(SDL_Renderer *pRenderer, std::shared_ptr<CameraNode> pCamera) = 0;
 
     // Physics world modifiers
-    virtual void VCreateTrigger(WeakActorPtr pActor, const Point& pos, Point& size, bool isStatic) = 0;
-    virtual void VApplyForce(uint32_t actorId, const Point& impulse) = 0;
-    virtual void VApplyLinearImpulse(uint32_t actorId, const Point& impulse) = 0;
-    virtual bool VKinematicMove(const Point& pos, uint32_t actorId) = 0;
+    virtual void VCreateTrigger(WeakActorPtr pActor, const Point &pos, Point &size, bool isStatic) = 0;
+    virtual void VApplyForce(uint32_t actorId, const Point &impulse) = 0;
+    virtual void VApplyLinearImpulse(uint32_t actorId, const Point &impulse) = 0;
+    virtual bool VKinematicMove(const Point &pos, uint32_t actorId) = 0;
 
     virtual Point GetGravity() const = 0;
 
     // Physics actor states
     virtual void VStopActor(uint32_t actorId) = 0;
     virtual Point VGetVelocity(uint32_t actorId) = 0;
-    virtual void SetVelocity(uint32_t actorId, const Point& velocity) = 0;
-    virtual void VTranslate(uint32_t actorId, const Point& dir) = 0;
-    virtual void VSetLinearSpeed(uint32_t actorId, const Point& speed) = 0;
-    virtual void VAddLinearSpeed(uint32_t actorId, const Point& speedIncrement) = 0;
+    virtual void SetVelocity(uint32_t actorId, const Point &velocity) = 0;
+    virtual void VTranslate(uint32_t actorId, const Point &dir) = 0;
+    virtual void VSetLinearSpeed(uint32_t actorId, const Point &speed) = 0;
+    virtual void VAddLinearSpeed(uint32_t actorId, const Point &speedIncrement) = 0;
     virtual void VSetGravityScale(uint32_t actorId, const float gravityScale) = 0;
-    virtual void VSetLinearSpeedEx(uint32_t actorId, const Point& speed) = 0;
+    virtual void VSetLinearSpeedEx(uint32_t actorId, const Point &speed) = 0;
     virtual bool VIsAwake(uint32_t actorId) = 0;
 
     virtual void VChangeCollisionFlag(uint32_t actorId, uint32_t fromFlag, uint32_t toFlag) = 0;
@@ -549,13 +586,13 @@ public:
     virtual void VActivate(uint32_t actorId) = 0;
     virtual void VDeactivate(uint32_t actorId) = 0;
 
-    virtual void VSetPosition(uint32_t actorId, const Point& position) = 0;
+    virtual void VSetPosition(uint32_t actorId, const Point &position) = 0;
     virtual Point VGetPosition(uint32_t actorId) = 0;
 
     virtual SDL_Rect VGetAABB(uint32_t actorId, bool discardSensors) = 0;
     virtual bool VIsActorOverlap(uint32_t actorId, FixtureType overlapType) = 0;
 
-    virtual RaycastResult VRayCast(const Point& fromPoint, const Point& toPoint, uint32_t filterMask) = 0;
+    virtual RaycastResult VRayCast(const Point &fromPoint, const Point &toPoint, uint32_t filterMask) = 0;
 
     virtual void VScaleActor(uint32_t actorId, double scale) = 0;
 };
@@ -587,11 +624,11 @@ class IGameLogic
 {
 public:
     virtual WeakActorPtr VGetActor(const uint32_t actorId) = 0;
-    virtual StrongActorPtr VCreateActor(const std::string& actorResource, TiXmlElement* overrides) = 0;
-    virtual StrongActorPtr VCreateActor(TiXmlElement* pActorRoot, TiXmlElement* overrides) = 0;
+    virtual StrongActorPtr VCreateActor(const std::string &actorResource, TiXmlElement *overrides) = 0;
+    virtual StrongActorPtr VCreateActor(TiXmlElement *pActorRoot, TiXmlElement *overrides) = 0;
     virtual void VDestroyActor(const uint32_t actorId) = 0;
-    virtual bool VLoadGame(const char* xmlLevelResource) = 0;
-    virtual bool VEnterMenu(const char* xmlMenuResource) = 0;
+    virtual bool VLoadGame(const char *xmlLevelResource) = 0;
+    virtual bool VEnterMenu(const char *xmlMenuResource) = 0;
     virtual void VSetProxy() = 0;
     virtual void VOnUpdate(uint32_t msDiff) = 0;
     virtual void VChangeState(enum GameState newState) = 0;
@@ -602,7 +639,7 @@ public:
 class IGameView
 {
 public:
-    virtual ~IGameView() { }
+    virtual ~IGameView() {}
 
     virtual void VOnRender(uint32_t msDiff) = 0;
     virtual void VOnLostDevice() = 0;
@@ -610,14 +647,14 @@ public:
     virtual uint32_t VGetId() const = 0;
     virtual void VOnAttach(uint32_t viewId, uint32_t actorId) = 0;
 
-    virtual bool VOnEvent(SDL_Event& evt) = 0;
+    virtual bool VOnEvent(SDL_Event &evt) = 0;
     virtual void VOnUpdate(uint32_t msDiff) = 0;
 };
 
 class IScreenElement
 {
 public:
-    virtual ~IScreenElement() { }
+    virtual ~IScreenElement() {}
 
     virtual void VOnLostDevice() = 0;
     virtual void VOnRender(uint32_t msDiff) = 0;
@@ -628,9 +665,9 @@ public:
     virtual bool VIsVisible() = 0;
     virtual void VSetVisible(bool visible) = 0;
 
-    virtual bool VOnEvent(SDL_Event& evt) = 0;
+    virtual bool VOnEvent(SDL_Event &evt) = 0;
 
-    virtual bool const operator < (IScreenElement const &other) { return VGetZOrder() < other.VGetZOrder(); }
+    virtual bool const operator<(IScreenElement const &other) { return VGetZOrder() < other.VGetZOrder(); }
 };
 
 typedef std::list<std::shared_ptr<IScreenElement>> ScreenElementList;
@@ -646,9 +683,9 @@ public:
 class IPointerHandler
 {
 public:
-    virtual bool VOnPointerMove(SDL_MouseMotionEvent& mouseEvent) = 0;
-    virtual bool VOnPointerButtonDown(SDL_MouseButtonEvent& mouseEvent) = 0;
-    virtual bool VOnPointerButtonUp(SDL_MouseButtonEvent& mouseEvent) = 0;
+    virtual bool VOnPointerMove(SDL_MouseMotionEvent &mouseEvent) = 0;
+    virtual bool VOnPointerButtonDown(SDL_MouseButtonEvent &mouseEvent) = 0;
+    virtual bool VOnPointerButtonUp(SDL_MouseButtonEvent &mouseEvent) = 0;
 };
 
 class IJoystickHandler
@@ -659,12 +696,19 @@ public:
     virtual bool VOnJoystickAxisMotion(Uint8 axis, Sint16 value) = 0;
 };
 
+class ITouchHandler
+{
+public:
+    virtual std::vector<std::shared_ptr<AbstractRecognizer>> VRegisterRecognizers() = 0;
+    virtual bool VOnTouch(const Touch_Event &evt) = 0;
+};
+
 //-------------------------------------------------------------------------------------------------
 // Abstract generic factory
 //-------------------------------------------------------------------------------------------------
 
 template <class BaseType, class SubType>
-BaseType* GenericObjectCreationFunction(void) { return new SubType; }
+BaseType *GenericObjectCreationFunction(void) { return new SubType; }
 
 template <class BaseClass, class IdType>
 class GenericObjectFactory
@@ -676,7 +720,7 @@ public:
         auto findIter = _creationFunctions.find(id);
         if (findIter == _creationFunctions.end())
         {
-            _creationFunctions[id] = &GenericObjectCreationFunction < BaseClass, SubClass >;
+            _creationFunctions[id] = &GenericObjectCreationFunction<BaseClass, SubClass>;
             return true;
         }
 
@@ -688,17 +732,10 @@ public:
     {
         IdType id = SubClass::GetIdFromName(SubClass::g_Name);
 
-        auto findIter = _creationFunctions.find(id);
-        if (findIter == _creationFunctions.end())
-        {
-            _creationFunctions[id] = &GenericObjectCreationFunction < BaseClass, SubClass >;
-            return true;
-        }
-
-        return false;
+        return Register<SubClass>(id);
     }
 
-    BaseClass* Create(IdType id)
+    BaseClass *Create(IdType id)
     {
         auto findIter = _creationFunctions.find(id);
         if (findIter != _creationFunctions.end())
@@ -711,22 +748,23 @@ public:
     }
 
 private:
-    typedef BaseClass* (*ObjectCreationFunction)();
+    typedef BaseClass *(*ObjectCreationFunction)();
     std::map<IdType, ObjectCreationFunction> _creationFunctions;
 };
 
-template <typename T> class Singleton
+template <typename T>
+class Singleton
 {
 public:
-    static T* Instance()
+    static T *Instance()
     {
         static T _singleton;
         return &_singleton;
     }
 
 protected:
-    Singleton() { }
-    ~Singleton() { }
+    Singleton() {}
+    ~Singleton() {}
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -734,16 +772,16 @@ protected:
 // Enum-To-String
 //-------------------------------------------------------------------------------------------------
 
-FixtureType FixtureTypeStringToEnum(std::string fixtureTypeStr);
+FixtureType FixtureTypeStringToEnum(const std::string &fixtureTypeStr);
 
-DamageType StringToDamageTypeEnum(const std::string& str);
+DamageType StringToDamageTypeEnum(const std::string &str);
 
-b2BodyType BodyTypeStringToEnum(std::string bodyTypeStr);
+b2BodyType BodyTypeStringToEnum(const std::string &bodyTypeStr);
 
-Direction StringToEnum_Direction(std::string dirStr);
+Direction StringToEnum_Direction(const std::string &dirStr);
 std::string EnumToString_Direction(Direction dir);
 
 std::string EnumToString_ActorPrototype(ActorPrototype actorProto);
-ActorPrototype StringToEnum_ActorPrototype(std::string actorProtoStr);
+ActorPrototype StringToEnum_ActorPrototype(const std::string &actorProtoStr);
 
 #endif

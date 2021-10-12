@@ -8,7 +8,7 @@
 // ClawHumanView
 //---------------------------------------------------------------------------------------------------------------------
 
-ClawHumanView::ClawHumanView(SDL_Renderer* renderer)
+ClawHumanView::ClawHumanView(SDL_Renderer *renderer)
     : HumanView(renderer)
 {
     RegisterAllDelegates();
@@ -22,7 +22,9 @@ ClawHumanView::ClawHumanView(SDL_Renderer* renderer)
 
     m_pKeyboardHandler = m_pFreeCameraController;
     m_pPointerHandler = m_pFreeCameraController;
-	m_pJoystickHandler = m_pFreeCameraController;
+    m_pTouchHandler = m_pFreeCameraController;
+    m_pJoystickHandler = m_pFreeCameraController;
+    g_pApp->RegisterTouchRecognizers(*m_pFreeCameraController);
 }
 
 ClawHumanView::~ClawHumanView()
@@ -30,13 +32,13 @@ ClawHumanView::~ClawHumanView()
     RemoveAllDelegates();
 }
 
-bool ClawHumanView::VOnEvent(SDL_Event& event)
+bool ClawHumanView::VOnEvent(SDL_Event &event)
 {
     if (HumanView::VOnEvent(event))
     {
         return true;
     }
-    
+
     // Handle game specific events
     return false;
 }
@@ -81,12 +83,14 @@ void ClawHumanView::VSetControlledActor(uint32 actorId)
     m_pActorController.reset(new ActorController(m_pControlledActor));
     m_pKeyboardHandler = m_pActorController;
     m_pPointerHandler = m_pActorController;
-	m_pJoystickHandler = m_pActorController;
+    m_pJoystickHandler = m_pActorController;
+    m_pTouchHandler = m_pActorController;
+    g_pApp->RegisterTouchRecognizers(*m_pActorController);
 
     m_pCamera->SetTarget(m_pControlledActor);
 }
 
-bool ClawHumanView::VLoadGameDelegate(TiXmlElement* pLevelXmlElem, LevelData* pLevelData)
+bool ClawHumanView::VLoadGameDelegate(TiXmlElement *pLevelXmlElem, LevelData *pLevelData)
 {
     if (!HumanView::VLoadGameDelegate(pLevelXmlElem, pLevelData))
     {
@@ -99,7 +103,7 @@ bool ClawHumanView::VLoadGameDelegate(TiXmlElement* pLevelXmlElem, LevelData* pL
         return false;
     }
 
-    TiXmlElement* pXmlIngameMenuRoot = XmlResourceLoader::LoadAndReturnRootXmlElement("INGAME_MENU.XML");
+    TiXmlElement *pXmlIngameMenuRoot = XmlResourceLoader::LoadAndReturnRootXmlElement("INGAME_MENU.XML");
     assert(pXmlIngameMenuRoot != NULL);
 
     m_pIngameMenu.reset(new ScreenElementMenu(g_pApp->GetRenderer()));
@@ -122,10 +126,8 @@ bool ClawHumanView::VLoadGameDelegate(TiXmlElement* pLevelXmlElem, LevelData* pL
 
 void ClawHumanView::RegisterAllDelegates()
 {
-
 }
 
 void ClawHumanView::RemoveAllDelegates()
 {
-
 }

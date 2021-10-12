@@ -56,12 +56,12 @@ bool MovementController::VOnKeyUp(SDL_Keycode key)
     return false;
 }
 
-bool MovementController::VOnPointerMove(SDL_MouseMotionEvent& mouseEvent)
+bool MovementController::VOnPointerMove(SDL_MouseMotionEvent &mouseEvent)
 {
     return false;
 }
 
-bool MovementController::VOnPointerButtonDown(SDL_MouseButtonEvent& mouseEvent)
+bool MovementController::VOnPointerButtonDown(SDL_MouseButtonEvent &mouseEvent)
 {
     if (mouseEvent.button == SDL_BUTTON_LEFT)
     {
@@ -77,7 +77,7 @@ bool MovementController::VOnPointerButtonDown(SDL_MouseButtonEvent& mouseEvent)
     return false;
 }
 
-bool MovementController::VOnPointerButtonUp(SDL_MouseButtonEvent& mouseEvent)
+bool MovementController::VOnPointerButtonUp(SDL_MouseButtonEvent &mouseEvent)
 {
     if (mouseEvent.button == SDL_BUTTON_LEFT)
     {
@@ -92,6 +92,17 @@ bool MovementController::VOnPointerButtonUp(SDL_MouseButtonEvent& mouseEvent)
 
     return false;
 }
+
+std::vector<std::shared_ptr<AbstractRecognizer>> MovementController::VRegisterRecognizers()
+{
+    return std::vector<std::shared_ptr<AbstractRecognizer>>();
+}
+
+bool MovementController::VOnTouch(const Touch_Event &evt)
+{
+    return false;
+}
+
 bool MovementController::VOnJoystickButtonDown(Uint8 button)
 {
     return false;

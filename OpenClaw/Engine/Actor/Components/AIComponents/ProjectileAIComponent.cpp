@@ -35,7 +35,7 @@ ProjectileAIComponent::ProjectileAIComponent()
 
 ProjectileAIComponent::~ProjectileAIComponent()
 {
-    for (auto pSparkle : m_PowerupSparkles)
+    for (const auto &pSparkle : m_PowerupSparkles)
     {
         shared_ptr<EventData_Destroy_Actor> pEvent(new EventData_Destroy_Actor(pSparkle->GetGUID()));
         IEventMgr::Get()->VQueueEvent(pEvent);
@@ -63,12 +63,13 @@ bool ProjectileAIComponent::VInit(TiXmlElement* pData)
     ParseValueFromXmlElem(&m_SourceActorId, pData->FirstChildElement("SourceActorId"));
     ParseValueFromXmlElem(&m_DetonationTime, pData->FirstChildElement("DetonationTime"));
     ParseValueFromXmlElem(&m_NumSparkles, pData->FirstChildElement("NumSparkles"));
+    ParseValueFromXmlElem(&m_bDestroyAfterAnimLoop, pData->FirstChildElement("DestroyAfterAnimLoop"));
 
     m_bHasDetonationTime = m_DetonationTime > 0;
     m_DamageType = StringToDamageTypeEnum(damageTypeStr);
 
     assert(m_DamageType != DamageType_None);
-    assert(m_Damage > 0);
+    assert(m_Damage >= 0);
 
     return true;
 }
@@ -80,17 +81,16 @@ void ProjectileAIComponent::VPostInit()
         m_pPhysics->VSetLinearSpeed(m_pOwner->GetGUID(), m_ProjectileSpeed);
     }
 
+    m_PowerupSparkles.reserve(m_NumSparkles);
     for (int sparkleIdx = 0; sparkleIdx < m_NumSparkles; sparkleIdx++)
     {
         StrongActorPtr pPowerupSparkle = ActorTemplates::CreatePowerupSparkleActor(50);
         assert(pPowerupSparkle);
 
-        shared_ptr<PositionComponent> pPositionComponent =
-            MakeStrongPtr(m_pOwner->GetComponent<PositionComponent>(PositionComponent::g_Name));
+        shared_ptr<PositionComponent> pPositionComponent = m_pOwner->GetPositionComponent();
         assert(pPositionComponent);
 
-        shared_ptr<PhysicsComponent> pPhysicsComponent =
-            MakeStrongPtr(m_pOwner->GetComponent<PhysicsComponent>(PhysicsComponent::g_Name));
+        shared_ptr<PhysicsComponent> pPhysicsComponent = m_pOwner->GetPhysicsComponent();
         assert(pPhysicsComponent);
 
         shared_ptr<PowerupSparkleAIComponent> pPowerupSparkleAIComponent =
@@ -106,6 +106,14 @@ void ProjectileAIComponent::VPostInit()
         pSparkleRenderComponent->SetVisible(true);
 
         m_PowerupSparkles.push_back(pPowerupSparkle);
+    }
+
+    if (m_bDestroyAfterAnimLoop)
+    {
+        AnimationComponent* pAC = MakeStrongPtr(m_pOwner->GetComponent<AnimationComponent>()).get();
+        assert(pAC != nullptr);
+
+        pAC->AddObserver(this);
     }
 }
 
@@ -213,5 +221,18 @@ void ProjectileAIComponent::OnCollidedWithActor(Actor* pActorWhoWasShot)
               MakeStrongPtr(pActorWhoWasShot->GetComponent<ClawControllableComponent>()) != nullptr)
     {
         OnCollidedWithSolidTile();
+    }
+}
+
+void ProjectileAIComponent::VOnAnimationLooped(Animation* pAnimation)
+{
+    if (m_bDestroyAfterAnimLoop)
+    {
+        m_pPhysics->VRemoveActor(m_pOwner->GetGUID());
+
+        shared_ptr<EventData_Destroy_Actor> pEvent(new EventData_Destroy_Actor(m_pOwner->GetGUID()));
+        IEventMgr::Get()->VQueueEvent(pEvent);
+
+        m_IsActive = false;
     }
 }

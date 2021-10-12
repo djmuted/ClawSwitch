@@ -51,13 +51,13 @@ bool BossStagerTriggerComponent::VInit(TiXmlElement* pData)
 {
     assert(pData);
 
-    assert(ParseValueFromXmlElem(&m_BossDistance, pData->FirstChildElement("BossDistance")));
-    assert(ParseValueFromXmlElem(&m_CameraSpeed, pData->FirstChildElement("CameraSpeed")));
-    assert(ParseValueFromXmlElem(&m_ClawDialogSound, pData->FirstChildElement("ClawDialogSound")));
-    assert(ParseValueFromXmlElem(&m_BossDialogSound, pData->FirstChildElement("BossDialogSound")));
-    assert(ParseValueFromXmlElem(&m_PopupTitleImageSet, pData->FirstChildElement("PopupTitleImageSet")));
-    assert(ParseValueFromXmlElem(&m_PopupTitleSound, pData->FirstChildElement("PopupTitleSound")));
-    assert(ParseValueFromXmlElem(&m_PopupTitleSpeed, pData->FirstChildElement("PopupTitleSpeed")));
+    DO_AND_CHECK(ParseValueFromXmlElem(&m_BossDistance, pData->FirstChildElement("BossDistance")));
+    DO_AND_CHECK(ParseValueFromXmlElem(&m_CameraSpeed, pData->FirstChildElement("CameraSpeed")));
+    DO_AND_CHECK(ParseValueFromXmlElem(&m_ClawDialogSound, pData->FirstChildElement("ClawDialogSound")));
+    DO_AND_CHECK(ParseValueFromXmlElem(&m_BossDialogSound, pData->FirstChildElement("BossDialogSound")));
+    DO_AND_CHECK(ParseValueFromXmlElem(&m_PopupTitleImageSet, pData->FirstChildElement("PopupTitleImageSet")));
+    DO_AND_CHECK(ParseValueFromXmlElem(&m_PopupTitleSound, pData->FirstChildElement("PopupTitleSound")));
+    DO_AND_CHECK(ParseValueFromXmlElem(&m_PopupTitleSpeed, pData->FirstChildElement("PopupTitleSpeed")));
 
     m_pCamera = g_pApp->GetHumanView()->GetCamera();
     assert(m_pCamera != nullptr);
@@ -123,6 +123,13 @@ void BossStagerTriggerComponent::VUpdate(uint32 msDiff)
             m_CurrentDelay = Util::GetSoundDurationMs(m_ClawDialogSound);
             SoundInfo sound(m_ClawDialogSound);
             IEventMgr::Get()->VTriggerEvent(IEventDataPtr(new EventData_Request_Play_Sound(sound)));
+
+            // Display Claw's exclamation speech image
+            int clawSpeechDuration = Util::GetSoundDurationMs(m_ClawDialogSound);
+            StrongActorPtr pClaw = g_pApp->GetGameLogic()->GetClawActor();
+            assert(pClaw != nullptr);
+            ((FollowableComponent*)pClaw->GetRawComponent<FollowableComponent>())
+                    ->Activate(clawSpeechDuration);
 
             m_State = BossStagerState_PlayingClawDialogSound;
         }

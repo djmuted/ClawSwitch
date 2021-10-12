@@ -21,53 +21,71 @@
 #include "../Resource/Loaders/PngLoader.h"
 
 #include "BaseGameApp.h"
-#include "switch.h"
 
 #include <cctype>
 
-TiXmlElement* CreateDefaultDisplayConfig();
-TiXmlElement* CreateDefaultAudioConfig();
-TiXmlElement* CreateDefaultFontConfig();
-TiXmlElement* CreateDefaultAssetsConfig();
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
+#ifdef __SWITCH__
+#include "switch.h"
+#endif
+
+TiXmlElement *CreateDefaultDisplayConfig();
+TiXmlElement *CreateDefaultAudioConfig();
+TiXmlElement *CreateDefaultFontConfig();
+TiXmlElement *CreateDefaultAssetsConfig();
 TiXmlDocument CreateDefaultConfig();
 
-BaseGameApp* g_pApp = NULL;
+BaseGameApp *g_pApp = NULL;
 
 BaseGameApp::BaseGameApp()
 {
     g_pApp = this;
 
     m_pGame = NULL;
-    m_pResourceCache = NULL;
     m_pEventMgr = NULL;
     m_pWindow = NULL;
     m_pRenderer = NULL;
     m_pPalette = NULL;
     m_pAudio = NULL;
     m_pConsoleFont = NULL;
+    m_pTouchManager = nullptr;
     m_IsRunning = false;
     m_QuitRequested = false;
     m_IsQuitting = false;
-	
-	m_Joystick = NULL;
+
+    m_Joystick = NULL;
     m_JoystickDeviceIndex = -1;
 }
 
-bool BaseGameApp::Initialize(int argc, char** argv)
+bool BaseGameApp::Initialize(int argc, char **argv)
 {
     RegisterEngineEvents();
     VRegisterGameEvents();
 
     // Initialization sequence
-    if (!InitializeEventMgr()) return false;
-    if (!InitializeDisplay(m_GameOptions)) return false;
-    if (!InitializeAudio(m_GameOptions)) return false;
-    if (!InitializeFont(m_GameOptions)) return false;
-    if (!InitializeResources(m_GameOptions)) return false;
-    if (!InitializeLocalization(m_GameOptions)) return false;
-	if (!InitializeControllers(m_GameOptions)) return false;
-    if (!ReadActorXmlPrototypes(m_GameOptions)) return false;
-    if (!ReadLevelMetadata(m_GameOptions)) return false;
+    if (!InitializeEventMgr())
+        return false;
+    if (!InitializeDisplay(m_GameOptions))
+        return false;
+    if (!InitializeAudio(m_GameOptions))
+        return false;
+    if (!InitializeFont(m_GameOptions))
+        return false;
+    if (!InitializeResources(m_GameOptions))
+        return false;
+    if (!InitializeLocalization(m_GameOptions))
+        return false;
+    if (!InitializeControllers(m_GameOptions))
+        return false;
+    if (!InitializeTouchManager(m_GameOptions))
+        return false;
+    if (!ReadActorXmlPrototypes(m_GameOptions))
+        return false;
+    if (!ReadLevelMetadata(m_GameOptions))
+        return false;
 
     RegisterAllDelegates();
 
@@ -78,9 +96,9 @@ bool BaseGameApp::Initialize(int argc, char** argv)
         return false;
     }
 
-    m_pResourceCache->Preload("/CLAW/*", NULL);
-    m_pResourceCache->Preload("/GAME/*", NULL);
-    m_pResourceCache->Preload("/STATES/*", NULL);
+    m_pResourceMgr->VPreload("/CLAW/*", NULL, ORIGINAL_RESOURCE);
+    m_pResourceMgr->VPreload("/GAME/*", NULL, ORIGINAL_RESOURCE);
+    m_pResourceMgr->VPreload("/STATES/*", NULL, ORIGINAL_RESOURCE);
 
     m_pResourceMgr->VPreload("*", NULL, CUSTOM_RESOURCE);
 
@@ -101,18 +119,31 @@ void BaseGameApp::Terminate()
 
     RemoveAllDelegates();
 
-	if (m_Joystick != NULL && SDL_JoystickGetAttached(m_Joystick) == SDL_TRUE) {
+    if (m_Joystick != NULL && SDL_JoystickGetAttached(m_Joystick) == SDL_TRUE)
+    {
         SDL_JoystickClose(m_Joystick);
         m_Joystick = NULL;
         m_JoystickDeviceIndex = -1;
     }
+
     SAFE_DELETE(m_pGame);
     SDL_DestroyRenderer(m_pRenderer);
     SDL_DestroyWindow(m_pWindow);
     SAFE_DELETE(m_pAudio);
-    // TODO - this causes crashes
-    //SAFE_DELETE(m_pEventMgr);
-    //SAFE_DELETE(m_pResourceCache);
+    SAFE_DELETE(m_pTouchManager);
+    SAFE_DELETE(m_pEventMgr);
+    SAFE_DELETE(m_pResourceMgr);
+    if (m_pConsoleFont)
+    {
+        TTF_CloseFont(m_pConsoleFont);
+        m_pConsoleFont = nullptr;
+    }
+
+    for (auto &actorProto : m_ActorXmlPrototypeMap)
+    {
+        delete actorProto.second;
+    }
+    m_ActorXmlPrototypeMap.clear();
 
     SaveGameOptions();
 
@@ -120,27 +151,26 @@ void BaseGameApp::Terminate()
 }
 
 #define STARTUP_TEST(condition, error) \
-{ \
-    if (!(condition)) \
-    { \
-       LOG_ERROR((error)); \
-       bTestsOk = false; \
-    } \
-} \
+    {                                  \
+        if (!(condition))              \
+        {                              \
+            LOG_ERROR((error));        \
+            bTestsOk = false;          \
+        }                              \
+    }
 
-#define STARTUP_TEST_FILE_PRESENCE_IN_RESCACHE(filePath, resCacheName, error) \
-{ \
-    std::vector<std::string> matchedFiles = m_pResourceMgr->VMatch((filePath), (resCacheName)); \
-    STARTUP_TEST(matchedFiles.size() > 0, error); \
-    if (bTestsOk) \
-    { \
-        std::string filePathCopy = (filePath); \
-        std::transform(filePathCopy.begin(), filePathCopy.end(), filePathCopy.begin(), (int(*)(int)) std::tolower); \
-        STARTUP_TEST(matchedFiles.size() == 1, "More than 1 file found"); \
-        STARTUP_TEST(matchedFiles[0] == (filePathCopy), (error)); \
-    } \
-} \
-
+#define STARTUP_TEST_FILE_PRESENCE_IN_RESCACHE(filePath, resCacheName, error)                                           \
+    {                                                                                                                   \
+        std::vector<std::string> matchedFiles = m_pResourceMgr->VMatch((filePath), (resCacheName));                     \
+        STARTUP_TEST(matchedFiles.size() > 0, error);                                                                   \
+        if (bTestsOk)                                                                                                   \
+        {                                                                                                               \
+            std::string filePathCopy = (filePath);                                                                      \
+            std::transform(filePathCopy.begin(), filePathCopy.end(), filePathCopy.begin(), (int (*)(int))std::tolower); \
+            STARTUP_TEST(matchedFiles.size() == 1, "More than 1 file found");                                           \
+            STARTUP_TEST(matchedFiles[0] == (filePathCopy), (error));                                                   \
+        }                                                                                                               \
+    }
 
 bool BaseGameApp::VPerformStartupTests()
 {
@@ -152,7 +182,7 @@ bool BaseGameApp::VPerformStartupTests()
     STARTUP_TEST(SDL_WasInit(SDL_INIT_EVENTS), "SDL Event subsystem is unitialized");
     STARTUP_TEST(m_pWindow != NULL, "SDL Window is NULL");
     STARTUP_TEST(m_pRenderer != NULL, "SDL Renderer is NULL");
-    
+
     // Game logic
     STARTUP_TEST(m_pGame != NULL, "Game Logic is NULL");
 
@@ -171,8 +201,8 @@ bool BaseGameApp::VPerformStartupTests()
 
     // Files located in my custom ASSETS.ZIP
     STARTUP_TEST_FILE_PRESENCE_IN_RESCACHE(
-        "/ACTOR_PROTOTYPES/LEVEL1/LEVEL1_SOLDIER.XML", 
-        CUSTOM_RESOURCE, 
+        "/ACTOR_PROTOTYPES/LEVEL1/LEVEL1_SOLDIER.XML",
+        CUSTOM_RESOURCE,
         "/ACTOR_PROTOTYPES/LEVEL1/LEVEL1_SOLDIER.XML not found in: " + std::string(CUSTOM_RESOURCE));
 
     STARTUP_TEST_FILE_PRESENCE_IN_RESCACHE(
@@ -183,19 +213,18 @@ bool BaseGameApp::VPerformStartupTests()
     return bTestsOk;
 }
 
-//=====================================================================================================================
-// BaseGameApp::Run - Main game loop
-//
-//    Handle events -> update game -> render views
-//=====================================================================================================================
-
-int32 BaseGameApp::Run()
+void BaseGameApp::StepLoop()
 {
     static uint32 lastTime = SDL_GetTicks();
     SDL_Event event;
-    int consecutiveLagSpikes = 0;
+    Touch_Event touchEvent;
+    static int consecutiveLagSpikes = 0;
 
+#ifdef __SWITCH__
     while (appletMainLoop() && m_IsRunning)
+#else
+    if (m_IsRunning)
+#endif
     {
         //PROFILE_CPU("MAINLOOP");
 
@@ -212,8 +241,7 @@ int32 BaseGameApp::Run()
             {
                 LOG_ERROR("Experiencing lag spikes, " + ToStr(consecutiveLagSpikes) + "high latency frames in a row");
             }
-			this->VOnRestore();
-            continue;
+            return;
         }
         consecutiveLagSpikes = 0;
 
@@ -221,6 +249,16 @@ int32 BaseGameApp::Run()
         while (SDL_PollEvent(&event))
         {
             OnEvent(event);
+        }
+
+        // Handle all touch events
+        if (m_pTouchManager)
+        {
+            m_pTouchManager->Update();
+            while (m_pTouchManager->PollEvent(&touchEvent))
+            {
+                OnEvent(touchEvent.sdlEvent);
+            }
         }
 
         if (m_pGame)
@@ -233,98 +271,149 @@ int32 BaseGameApp::Run()
             }
 
             // Render game
-            for (auto pGameView : m_pGame->m_GameViews)
+            for (auto &pGameView : m_pGame->m_GameViews)
             {
                 //PROFILE_CPU("ONLY RENDER");
                 pGameView->VOnRender(elapsedTime);
             }
-            
+
             //m_pGame->VRenderDiagnostics();
         }
 
         // Artificially decrease fps. Configurable from console
-        SDL_Delay(m_DebugOptions.cpuDelayMs);
+        Util::Sleep(m_DebugOptions.cpuDelayMs);
     }
+}
 
+void Loop(void *instance)
+{
+    auto self = static_cast<BaseGameApp *>(instance);
+    self->StepLoop();
+#ifdef __EMSCRIPTEN__
+    if (!self->m_IsRunning)
+    {
+        emscripten_cancel_main_loop();
+    }
+#endif
+}
+
+//=====================================================================================================================
+// BaseGameApp::Run - Main game loop
+//
+//    Handle events -> update game -> render views
+//=====================================================================================================================
+
+int32 BaseGameApp::Run()
+{
+    // Some systems (like web browsers) does not support infinite loops.
+    // We need to return control after each loop steps.
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop_arg(Loop, this, 0, 1);
+    // Loop must call emscripten_cancel_main_loop() to exit
+#else
+    while (m_IsRunning)
+    {
+        Loop(this);
+    }
+#endif
     Terminate();
-
     return 0;
 }
 
-void BaseGameApp::OnEvent(SDL_Event& event)
+void BaseGameApp::OnEvent(SDL_Event &event)
 {
     switch (event.type)
     {
-        case SDL_QUIT:
-        case SDL_APP_TERMINATING:
-        {
-            m_IsRunning = false;
-            break;
-        }
+    case SDL_QUIT:
+    case SDL_APP_TERMINATING:
+    {
+        m_IsRunning = false;
+        break;
+    }
 
-        case SDL_WINDOWEVENT:
+    case SDL_WINDOWEVENT:
+    {
+        if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED /*||
+                event.window.event == SDL_WINDOWEVENT_RESIZED*/
+        )
         {
-            if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED /*||
-                event.window.event == SDL_WINDOWEVENT_RESIZED*/)
+            OnDisplayChange(event.window.data1, event.window.data2);
+        }
+        else if (event.window.event == SDL_WINDOWEVENT_RESTORED)
+        {
+            VOnRestore();
+        }
+        else if (event.window.event == SDL_WINDOWEVENT_MINIMIZED)
+        {
+            void VOnMinimized();
+        }
+        break;
+    }
+
+    case SDL_APP_LOWMEMORY:
+    {
+        LOG_WARNING("Running low on memory");
+        break;
+    }
+
+    case SDL_APP_DIDENTERBACKGROUND:
+    {
+        LOG("Entered background");
+        break;
+    }
+
+    case SDL_APP_DIDENTERFOREGROUND:
+    {
+        LOG("Entered foreground");
+        break;
+    }
+
+    case SDL_KEYDOWN:
+    case SDL_KEYUP:
+    case SDL_TEXTEDITING:
+    case SDL_TEXTINPUT:
+    case SDL_MOUSEMOTION:
+    case SDL_MOUSEBUTTONDOWN:
+    case SDL_MOUSEBUTTONUP:
+    case SDL_MOUSEWHEEL:
+    case SDL_UserTouchEvent:
+    case SDL_JOYBUTTONDOWN:
+    case SDL_JOYBUTTONUP:
+    case SDL_JOYAXISMOTION:
+    case SDL_JOYDEVICEREMOVED:
+    case SDL_JOYDEVICEADDED:
+    {
+        if (m_pGame)
+        {
+            for (GameViewList::reverse_iterator iter = m_pGame->m_GameViews.rbegin();
+                 iter != m_pGame->m_GameViews.rend(); ++iter)
             {
-                OnDisplayChange(event.window.data1, event.window.data2);
+                (*iter)->VOnEvent(event);
             }
-            else if (event.window.event == SDL_WINDOWEVENT_RESTORED)
+        }
+        break;
+    }
+    case SDL_FINGERUP:
+    case SDL_FINGERDOWN:
+    case SDL_FINGERMOTION:
+    {
+        if (m_pTouchManager)
+        {
+            switch (event.type)
             {
-                VOnRestore();
+            case SDL_FINGERUP:
+                m_pTouchManager->OnFingerUp(event.tfinger);
+                break;
+            case SDL_FINGERDOWN:
+                m_pTouchManager->OnFingerDown(event.tfinger);
+                break;
+            case SDL_FINGERMOTION:
+                m_pTouchManager->OnFingerMotion(event.tfinger);
+                break;
             }
-            else if (event.window.event == SDL_WINDOWEVENT_MINIMIZED)
-            {
-                void VOnMinimized();
-            }
-            break;
         }
-
-        case SDL_APP_LOWMEMORY:
-        {
-            LOG_WARNING("Running low on memory");
-            break;
-        }
-
-        case SDL_APP_DIDENTERBACKGROUND:
-        {
-            LOG("Entered background");
-            break;
-        }
-
-        case SDL_APP_DIDENTERFOREGROUND:
-        {
-            LOG("Entered foreground");
-            break;
-        }
-
-        case SDL_KEYDOWN:
-        case SDL_KEYUP:
-        case SDL_TEXTEDITING:
-        case SDL_TEXTINPUT:
-        case SDL_MOUSEMOTION:
-        case SDL_MOUSEBUTTONDOWN:
-        case SDL_MOUSEBUTTONUP:
-        case SDL_MOUSEWHEEL:
-        case SDL_FINGERUP:
-        case SDL_FINGERDOWN:
-        case SDL_FINGERMOTION:
-		case SDL_JOYBUTTONDOWN:
-        case SDL_JOYBUTTONUP:
-        case SDL_JOYAXISMOTION:
-        case SDL_JOYDEVICEREMOVED:
-        case SDL_JOYDEVICEADDED:
-        {
-            if (m_pGame)
-            {
-                for (GameViewList::reverse_iterator iter = m_pGame->m_GameViews.rbegin();
-                    iter != m_pGame->m_GameViews.rend(); ++iter)
-                {
-                    (*iter)->VOnEvent(event);
-                }
-            }
-            break;
-        }
+        break;
+    }
     }
 }
 
@@ -353,15 +442,14 @@ std::string BaseGameApp::GetString(std::string stringId)
     return "";
 }
 
-HumanView* BaseGameApp::GetHumanView() const
+HumanView *BaseGameApp::GetHumanView() const
 {
     HumanView *pView = NULL;
-    for (GameViewList::iterator i = m_pGame->m_GameViews.begin(); i != m_pGame->m_GameViews.end(); ++i)
+    for (auto &view : m_pGame->m_GameViews)
     {
-        if ((*i)->VGetType() == GameView_Human)
+        if (view->VGetType() == GameView_Human)
         {
-            shared_ptr<IGameView> pIGameView(*i);
-            pView = static_cast<HumanView *>(&*pIGameView);
+            pView = static_cast<HumanView *>(view.get());
             break;
         }
     }
@@ -369,16 +457,16 @@ HumanView* BaseGameApp::GetHumanView() const
     return pView;
 }
 
-bool BaseGameApp::LoadGameOptions(const char* inConfigFile)
+bool BaseGameApp::LoadGameOptions(const char *inConfigFile)
 {
+    TiXmlDocument m_XmlConfiguration;
     if (!m_XmlConfiguration.LoadFile(inConfigFile))
     {
-        LOG_WARNING("Configuration file: " + std::string(inConfigFile)
-            + " not found - creating default configuration");
+        LOG_WARNING("Configuration file: " + std::string(inConfigFile) + " not found - creating default configuration");
         m_XmlConfiguration = CreateAndReturnDefaultConfig(inConfigFile);
     }
 
-    TiXmlElement* configRoot = m_XmlConfiguration.RootElement();
+    TiXmlElement *configRoot = m_XmlConfiguration.RootElement();
     if (configRoot == NULL)
     {
         LOG_ERROR("Could not load root element for config file");
@@ -388,10 +476,10 @@ bool BaseGameApp::LoadGameOptions(const char* inConfigFile)
     //-------------------------------------------------------------------------
     // Display
     //-------------------------------------------------------------------------
-    TiXmlElement* displayElem = configRoot->FirstChildElement("Display");
+    TiXmlElement *displayElem = configRoot->FirstChildElement("Display");
     if (displayElem)
     {
-        TiXmlElement* windowSizeElem = displayElem->FirstChildElement("Size");
+        TiXmlElement *windowSizeElem = displayElem->FirstChildElement("Size");
         if (windowSizeElem)
         {
             windowSizeElem->Attribute("width", &m_GameOptions.windowWidth);
@@ -399,70 +487,79 @@ bool BaseGameApp::LoadGameOptions(const char* inConfigFile)
         }
 
         ParseValueFromXmlElem(&m_GameOptions.scale,
-            displayElem->FirstChildElement("Scale"));
+                              displayElem->FirstChildElement("Scale"));
         ParseValueFromXmlElem(&m_GameOptions.useVerticalSync,
-            displayElem->FirstChildElement("UseVerticalSync"));
+                              displayElem->FirstChildElement("UseVerticalSync"));
         ParseValueFromXmlElem(&m_GameOptions.isFullscreen,
-            displayElem->FirstChildElement("IsFullscreen"));
+                              displayElem->FirstChildElement("IsFullscreen"));
         ParseValueFromXmlElem(&m_GameOptions.isFullscreenDesktop,
-            displayElem->FirstChildElement("IsFullscreenDesktop"));
+                              displayElem->FirstChildElement("IsFullscreenDesktop"));
     }
+#ifdef __EMSCRIPTEN__
+    SDL_Point canvasSize;
+    if (Util::GetCanvasSize(canvasSize))
+    {
+        LOG(ToStr("Config window size is replaced by canvas size: ") + ToStr(canvasSize.x) + ToStr("x") + ToStr(canvasSize.y));
+        m_GameOptions.windowWidth = canvasSize.x;
+        m_GameOptions.windowHeight = canvasSize.y;
+    }
+#endif
 
     //-------------------------------------------------------------------------
     // Audio
     //-------------------------------------------------------------------------
-    TiXmlElement* audioElem = configRoot->FirstChildElement("Audio");
+    TiXmlElement *audioElem = configRoot->FirstChildElement("Audio");
     if (audioElem)
     {
         ParseValueFromXmlElem(&m_GameOptions.frequency,
-            audioElem->FirstChildElement("Frequency"));
+                              audioElem->FirstChildElement("Frequency"));
         ParseValueFromXmlElem(&m_GameOptions.soundChannels,
-            audioElem->FirstChildElement("SoundChannels"));
+                              audioElem->FirstChildElement("SoundChannels"));
         ParseValueFromXmlElem(&m_GameOptions.mixingChannels,
-            audioElem->FirstChildElement("MixingChannels"));
+                              audioElem->FirstChildElement("MixingChannels"));
         ParseValueFromXmlElem(&m_GameOptions.chunkSize,
-            audioElem->FirstChildElement("ChunkSize"));
+                              audioElem->FirstChildElement("ChunkSize"));
         ParseValueFromXmlElem(&m_GameOptions.midiRpcServerPath,
-            audioElem->FirstChildElement("MusiscRpcServerPath"));
+                              audioElem->FirstChildElement("MusiscRpcServerPath"));
         ParseValueFromXmlElem(&m_GameOptions.soundVolume,
-            audioElem->FirstChildElement("SoundVolume"));
+                              audioElem->FirstChildElement("SoundVolume"));
         ParseValueFromXmlElem(&m_GameOptions.musicVolume,
-            audioElem->FirstChildElement("MusicVolume"));
+                              audioElem->FirstChildElement("MusicVolume"));
         ParseValueFromXmlElem(&m_GameOptions.soundOn,
-            audioElem->FirstChildElement("SoundOn"));
+                              audioElem->FirstChildElement("SoundOn"));
         ParseValueFromXmlElem(&m_GameOptions.musicOn,
-            audioElem->FirstChildElement("MusicOn"));
+                              audioElem->FirstChildElement("MusicOn"));
     }
 
     //-------------------------------------------------------------------------
     // Assets
     //-------------------------------------------------------------------------
-    TiXmlElement* assetsElem = configRoot->FirstChildElement("Assets");
+    TiXmlElement *assetsElem = configRoot->FirstChildElement("Assets");
     if (assetsElem)
     {
         ParseValueFromXmlElem(&m_GameOptions.assetsFolder,
-            assetsElem->FirstChildElement("AssetsFolder"));
-        assert(ParseValueFromXmlElem(&m_GameOptions.rezArchive,
-            assetsElem->FirstChildElement("RezArchive")));
-        assert(ParseValueFromXmlElem(&m_GameOptions.customArchive,
-            assetsElem->FirstChildElement("CustomArchive")));
-        assert(ParseValueFromXmlElem(&m_GameOptions.resourceCacheSize,
-            assetsElem->FirstChildElement("ResourceCacheSize")));
+                              assetsElem->FirstChildElement("AssetsFolder"));
+        DO_AND_CHECK(ParseValueFromXmlElem(&m_GameOptions.rezArchive,
+                                           assetsElem->FirstChildElement("RezArchive")));
+        DO_AND_CHECK(ParseValueFromXmlElem(&m_GameOptions.customArchive,
+                                           assetsElem->FirstChildElement("CustomArchive")));
+        DO_AND_CHECK(ParseValueFromXmlElem(&m_GameOptions.resourceCacheSize,
+                                           assetsElem->FirstChildElement("ResourceCacheSize")));
         ParseValueFromXmlElem(&m_GameOptions.tempDir,
-            assetsElem->FirstChildElement("TempDir"));
-        assert(ParseValueFromXmlElem(&m_GameOptions.savesFile,
-            assetsElem->FirstChildElement("SavesFile")));
+                              assetsElem->FirstChildElement("TempDir"));
+        DO_AND_CHECK(ParseValueFromXmlElem(&m_GameOptions.savesFile,
+                                           assetsElem->FirstChildElement("SavesFile")));
     }
 
     //-------------------------------------------------------------------------
     // Font
     //-------------------------------------------------------------------------
-    TiXmlElement* fontRootElem = configRoot->FirstChildElement("Font");
+    TiXmlElement *fontRootElem = configRoot->FirstChildElement("Font");
     if (fontRootElem)
     {
-        for (TiXmlElement* fontElem = fontRootElem->FirstChildElement("Font");
-            fontElem != NULL;
-            fontElem = fontElem->NextSiblingElement("Font"))
+        for (TiXmlElement *fontElem = fontRootElem->FirstChildElement("Font");
+             fontElem != NULL;
+             fontElem = fontElem->NextSiblingElement("Font"))
         {
             if (fontElem->GetText())
             {
@@ -471,11 +568,11 @@ bool BaseGameApp::LoadGameOptions(const char* inConfigFile)
             }
         }
 
-        TiXmlElement* consoleFontElem = fontRootElem->FirstChildElement("ConsoleFont");
+        TiXmlElement *consoleFontElem = fontRootElem->FirstChildElement("ConsoleFont");
         if (consoleFontElem)
         {
-            consoleFontElem->Attribute("size", (int*)&m_GameOptions.consoleFontSize);
-            if (const char* fontName = consoleFontElem->Attribute("font"))
+            consoleFontElem->Attribute("size", (int *)&m_GameOptions.consoleFontSize);
+            if (const char *fontName = consoleFontElem->Attribute("font"))
             {
                 m_GameOptions.consoleFontName = m_GameOptions.assetsFolder + fontName;
             }
@@ -485,23 +582,23 @@ bool BaseGameApp::LoadGameOptions(const char* inConfigFile)
     //-------------------------------------------------------------------------
     // Console
     //-------------------------------------------------------------------------
-    if (TiXmlElement* pConsoleRootElem = configRoot->FirstChildElement("Console"))
+    if (TiXmlElement *pConsoleRootElem = configRoot->FirstChildElement("Console"))
     {
         ParseValueFromXmlElem(&m_GameOptions.consoleConfig.backgroundImagePath,
-            pConsoleRootElem->FirstChildElement("BackgroundImagePath"));
+                              pConsoleRootElem->FirstChildElement("BackgroundImagePath"));
         ParseValueFromXmlElem(&m_GameOptions.consoleConfig.stretchBackgroundImage,
-            pConsoleRootElem->FirstChildElement("StretchBackgroundImage"));
+                              pConsoleRootElem->FirstChildElement("StretchBackgroundImage"));
         ParseValueFromXmlElem(&m_GameOptions.consoleConfig.widthRatio,
-            pConsoleRootElem->FirstChildElement("WidthRatio"));
+                              pConsoleRootElem->FirstChildElement("WidthRatio"));
         ParseValueFromXmlElem(&m_GameOptions.consoleConfig.heightRatio,
-            pConsoleRootElem->FirstChildElement("HeightRatio"));
+                              pConsoleRootElem->FirstChildElement("HeightRatio"));
         ParseValueFromXmlElem(&m_GameOptions.consoleConfig.lineSeparatorHeight,
-            pConsoleRootElem->FirstChildElement("LineSeparatorHeight"));
+                              pConsoleRootElem->FirstChildElement("LineSeparatorHeight"));
         ParseValueFromXmlElem(&m_GameOptions.consoleConfig.commandPromptOffsetY,
-            pConsoleRootElem->FirstChildElement("CommandPromptOffsetY"));
+                              pConsoleRootElem->FirstChildElement("CommandPromptOffsetY"));
         ParseValueFromXmlElem(&m_GameOptions.consoleConfig.consoleAnimationSpeed,
-            pConsoleRootElem->FirstChildElement("ConsoleAnimationSpeed"));
-        if (TiXmlElement* pElem = pConsoleRootElem->FirstChildElement("FontColor"))
+                              pConsoleRootElem->FirstChildElement("ConsoleAnimationSpeed"));
+        if (TiXmlElement *pElem = pConsoleRootElem->FirstChildElement("FontColor"))
         {
             int r, g, b;
             pElem->Attribute("r", &r);
@@ -512,13 +609,13 @@ bool BaseGameApp::LoadGameOptions(const char* inConfigFile)
             m_GameOptions.consoleConfig.fontColor.b = b;
         }
         ParseValueFromXmlElem(&m_GameOptions.consoleConfig.fontHeight,
-            pConsoleRootElem->FirstChildElement("FontHeight"));
+                              pConsoleRootElem->FirstChildElement("FontHeight"));
         ParseValueFromXmlElem(&m_GameOptions.consoleConfig.leftOffset,
-            pConsoleRootElem->FirstChildElement("LeftOffset"));
+                              pConsoleRootElem->FirstChildElement("LeftOffset"));
         ParseValueFromXmlElem(&m_GameOptions.consoleConfig.commandPrompt,
-            pConsoleRootElem->FirstChildElement("CommandPrompt"));
+                              pConsoleRootElem->FirstChildElement("CommandPrompt"));
         ParseValueFromXmlElem(&m_GameOptions.consoleConfig.fontPath,
-            pConsoleRootElem->FirstChildElement("FontPath"));
+                              pConsoleRootElem->FirstChildElement("FontPath"));
 
         m_GameOptions.consoleConfig.backgroundImagePath =
             m_GameOptions.assetsFolder + m_GameOptions.consoleConfig.backgroundImagePath;
@@ -533,71 +630,89 @@ bool BaseGameApp::LoadGameOptions(const char* inConfigFile)
     //-------------------------------------------------------------------------
     // Global options
     //-------------------------------------------------------------------------
-    if (TiXmlElement* pGlobalOptionsRootElem = configRoot->FirstChildElement("GlobalOptions"))
+    if (TiXmlElement *pGlobalOptionsRootElem = configRoot->FirstChildElement("GlobalOptions"))
     {
         ParseValueFromXmlElem(&m_GlobalOptions.maxJumpSpeed,
-            pGlobalOptionsRootElem->FirstChildElement("MaxJumpSpeed"));
+                              pGlobalOptionsRootElem->FirstChildElement("MaxJumpSpeed"));
         ParseValueFromXmlElem(&m_GlobalOptions.maxFallSpeed,
-            pGlobalOptionsRootElem->FirstChildElement("MaxFallSpeed"));
+                              pGlobalOptionsRootElem->FirstChildElement("MaxFallSpeed"));
         ParseValueFromXmlElem(&m_GlobalOptions.idleSoundQuoteIntervalMs,
-            pGlobalOptionsRootElem->FirstChildElement("IdleSoundQuoteInterval"));
+                              pGlobalOptionsRootElem->FirstChildElement("IdleSoundQuoteInterval"));
         ParseValueFromXmlElem(&m_GlobalOptions.platformSpeedModifier,
-            pGlobalOptionsRootElem->FirstChildElement("PlatformSpeedModifier"));
+                              pGlobalOptionsRootElem->FirstChildElement("PlatformSpeedModifier"));
         ParseValueFromXmlElem(&m_GlobalOptions.runSpeed,
-            pGlobalOptionsRootElem->FirstChildElement("RunSpeed"));
+                              pGlobalOptionsRootElem->FirstChildElement("RunSpeed"));
         ParseValueFromXmlElem(&m_GlobalOptions.powerupRunSpeed,
-            pGlobalOptionsRootElem->FirstChildElement("PowerupRunSpeed"));
+                              pGlobalOptionsRootElem->FirstChildElement("PowerupRunSpeed"));
         ParseValueFromXmlElem(&m_GlobalOptions.maxJumpHeight,
-            pGlobalOptionsRootElem->FirstChildElement("MaxJumpHeight"));
+                              pGlobalOptionsRootElem->FirstChildElement("MaxJumpHeight"));
         ParseValueFromXmlElem(&m_GlobalOptions.powerupMaxJumpHeight,
-            pGlobalOptionsRootElem->FirstChildElement("PowerupMaxJumpHeight"));
+                              pGlobalOptionsRootElem->FirstChildElement("PowerupMaxJumpHeight"));
         ParseValueFromXmlElem(&m_GlobalOptions.startLookUpOrDownTime,
-            pGlobalOptionsRootElem->FirstChildElement("StartLookUpOrDownTime"));
+                              pGlobalOptionsRootElem->FirstChildElement("StartLookUpOrDownTime"));
+        ParseValueFromXmlElem(&m_GlobalOptions.freezeTime,
+                              pGlobalOptionsRootElem->FirstChildElement("FreezeTime"));
         ParseValueFromXmlElem(&m_GlobalOptions.maxLookUpOrDownDistance,
-            pGlobalOptionsRootElem->FirstChildElement("MaxLookUpOrDownDistance"));
+                              pGlobalOptionsRootElem->FirstChildElement("MaxLookUpOrDownDistance"));
         ParseValueFromXmlElem(&m_GlobalOptions.lookUpOrDownSpeed,
-            pGlobalOptionsRootElem->FirstChildElement("LookUpOrDownSpeed"));
+                              pGlobalOptionsRootElem->FirstChildElement("LookUpOrDownSpeed"));
         ParseValueFromXmlElem(&m_GlobalOptions.scoreScreenPalPath,
-            pGlobalOptionsRootElem->FirstChildElement("ScoreScreenPalPath"));
+                              pGlobalOptionsRootElem->FirstChildElement("ScoreScreenPalPath"));
         ParseValueFromXmlElem(&m_GlobalOptions.clawRunningSpeed,
-            pGlobalOptionsRootElem->FirstChildElement("ClawRunningSpeed"));
+                              pGlobalOptionsRootElem->FirstChildElement("ClawRunningSpeed"));
         /*ParseValueFromXmlElem(&m_GlobalOptions.springBoardSpringHeight,
             pGlobalOptionsRootElem->FirstChildElement("SpringBoardSpringHeight"));*/
         ParseValueFromXmlElem(&m_GlobalOptions.springBoardSpringSpeed,
-            pGlobalOptionsRootElem->FirstChildElement("SpringBoardSpringSpeed"));
-        ParseValueFromXmlElem(&m_GlobalOptions.useAlternateControls,
-            pGlobalOptionsRootElem->FirstChildElement("UseAlternateControls"));
+                              pGlobalOptionsRootElem->FirstChildElement("SpringBoardSpringSpeed"));
         ParseValueFromXmlElem(&m_GlobalOptions.clawMinFallHeight,
-            pGlobalOptionsRootElem->FirstChildElement("ClawMinFallHeight"));
+                              pGlobalOptionsRootElem->FirstChildElement("ClawMinFallHeight"));
         ParseValueFromXmlElem(&m_GlobalOptions.loadAllLevelSaves,
-            pGlobalOptionsRootElem->FirstChildElement("LoadAllLevelSaves"));
+                              pGlobalOptionsRootElem->FirstChildElement("LoadAllLevelSaves"));
         ParseValueFromXmlElem(&m_GlobalOptions.showFps,
-            pGlobalOptionsRootElem->FirstChildElement("ShowFps"));
+                              pGlobalOptionsRootElem->FirstChildElement("ShowFps"));
         ParseValueFromXmlElem(&m_GlobalOptions.showPosition,
-            pGlobalOptionsRootElem->FirstChildElement("ShowPosition"));
+                              pGlobalOptionsRootElem->FirstChildElement("ShowPosition"));
+    }
+
+    //-------------------------------------------------------------------------
+    // Control options
+    //-------------------------------------------------------------------------
+    if (TiXmlElement *pControlOptionsRootElem = configRoot->FirstChildElement("ControlOptions"))
+    {
+        ParseValueFromXmlElem(&m_ControlOptions.useAlternateControls,
+                              pControlOptionsRootElem->FirstChildElement("UseAlternateControls"));
+        if (TiXmlElement *pTouchScreenOptionsRootElem = pControlOptionsRootElem->FirstChildElement("TouchScreen"))
+        {
+            ParseValueFromXmlElem(&m_ControlOptions.touchScreen.enable,
+                                  pTouchScreenOptionsRootElem->FirstChildElement("Enable"));
+            ParseValueFromXmlElem(&m_ControlOptions.touchScreen.distanceThreshold,
+                                  pTouchScreenOptionsRootElem->FirstChildElement("DistanceThreshold"));
+            ParseValueFromXmlElem(&m_ControlOptions.touchScreen.timeThreshold,
+                                  pTouchScreenOptionsRootElem->FirstChildElement("TimeThreshold"));
+        }
     }
 
     //-------------------------------------------------------------------------
     // Debug options
     //-------------------------------------------------------------------------
-    if (TiXmlElement* pDebugOptionsRootElem = configRoot->FirstChildElement("DebugOptions"))
+    if (TiXmlElement *pDebugOptionsRootElem = configRoot->FirstChildElement("DebugOptions"))
     {
         ParseValueFromXmlElem(&m_DebugOptions.bSkipBossFightIntro,
-            pDebugOptionsRootElem->FirstChildElement("SkipBossFightIntro"));
+                              pDebugOptionsRootElem->FirstChildElement("SkipBossFightIntro"));
         ParseValueFromXmlElem(&m_DebugOptions.bSkipMenu,
-            pDebugOptionsRootElem->FirstChildElement("SkipMenu"));
+                              pDebugOptionsRootElem->FirstChildElement("SkipMenu"));
         ParseValueFromXmlElem(&m_DebugOptions.cpuDelayMs,
-            pDebugOptionsRootElem->FirstChildElement("CpuDelay"));
+                              pDebugOptionsRootElem->FirstChildElement("CpuDelay"));
         ParseValueFromXmlElem(&m_DebugOptions.lastImplementedLevel,
-            pDebugOptionsRootElem->FirstChildElement("LastImplementedLevel"));
+                              pDebugOptionsRootElem->FirstChildElement("LastImplementedLevel"));
         ParseValueFromXmlElem(&m_DebugOptions.skipMenuToLevel,
-            pDebugOptionsRootElem->FirstChildElement("SkipMenuToLevel"));
+                              pDebugOptionsRootElem->FirstChildElement("SkipMenuToLevel"));
     }
 
     return true;
 }
 
-void BaseGameApp::SaveGameOptions(const char* outConfigFile)
+void BaseGameApp::SaveGameOptions(const char *outConfigFile)
 {
     LOG_ERROR("Not implemented yet!");
     return;
@@ -639,13 +754,9 @@ void BaseGameApp::RegisterEngineEvents()
 //
 // Initializes SDL2 main game window and creates SDL2 renderer
 //---------------------------------------------------------------------------------------------------------------------
-bool BaseGameApp::InitializeDisplay(GameOptions& gameOptions)
+bool BaseGameApp::InitializeDisplay(GameOptions &gameOptions)
 {
-LOG(">>>>> Initializing display...");
-
-#ifdef __SWITCH__
-    SDL_setenv("SDL_SOUNDFONTS", "claw.sf2", 1);
-#endif
+    LOG(">>>>> Initializing display...");
 
     if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_VIDEO) != 0)
     {
@@ -654,7 +765,7 @@ LOG(">>>>> Initializing display...");
     }
 
     m_pWindow = SDL_CreateWindow(VGetGameTitle(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-        gameOptions.windowWidth, gameOptions.windowHeight, SDL_WINDOW_SHOWN);
+                                 gameOptions.windowWidth, gameOptions.windowHeight, SDL_WINDOW_SHOWN);
     if (m_pWindow == NULL)
     {
         LOG_ERROR("Failed to create main window");
@@ -690,12 +801,14 @@ LOG(">>>>> Initializing display...");
     SDL_RenderSetScale(m_pRenderer, (float)gameOptions.scale, (float)gameOptions.scale);
 
     LOG("Display successfully initialized.");
-	SDL_Surface * image = IMG_Load("splash.png");
-	SDL_Texture * texture = SDL_CreateTextureFromSurface(m_pRenderer, image);
-	SDL_RenderCopy(m_pRenderer, texture, NULL, NULL);
-	SDL_RenderPresent(m_pRenderer);
-	SDL_DestroyTexture(texture);
-	SDL_FreeSurface(image);
+
+    SDL_Surface *image = IMG_Load("splash.png");
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(m_pRenderer, image);
+    SDL_RenderCopy(m_pRenderer, texture, NULL, NULL);
+    SDL_RenderPresent(m_pRenderer);
+    SDL_DestroyTexture(texture);
+    SDL_FreeSurface(image);
+
     return true;
 }
 
@@ -704,9 +817,13 @@ LOG(">>>>> Initializing display...");
 //
 // Initializes SDL Mixer as audio device
 //---------------------------------------------------------------------------------------------------------------------
-bool BaseGameApp::InitializeAudio(GameOptions& gameOptions)
+bool BaseGameApp::InitializeAudio(GameOptions &gameOptions)
 {
     LOG(">>>>> Initializing audio...");
+
+#ifdef __SWITCH__
+    SDL_setenv("SDL_SOUNDFONTS", "claw.sf2", 1);
+#endif
 
     m_pAudio = new Audio();
     if (!m_pAudio->Initialize(gameOptions))
@@ -717,10 +834,11 @@ bool BaseGameApp::InitializeAudio(GameOptions& gameOptions)
 
     LOG("Audio successfully initialized.");
 
-	Mix_Chunk *sound = Mix_LoadWAV("TITLE.wav");
-	SoundProperties soundProperties;
-	soundProperties.volume = 200;
-	m_pAudio->PlaySound(sound, soundProperties);
+    Mix_Chunk *sound = Mix_LoadWAV("TITLE.wav");
+    SoundProperties soundProperties;
+    soundProperties.volume = 200;
+    m_pAudio->PlaySound(sound, soundProperties);
+
     return true;
 }
 
@@ -729,7 +847,7 @@ bool BaseGameApp::InitializeAudio(GameOptions& gameOptions)
 //
 // Register CLAW.REZ resource file as resource cache for assets the game is going to use
 //---------------------------------------------------------------------------------------------------------------------
-bool BaseGameApp::InitializeResources(GameOptions& gameOptions)
+bool BaseGameApp::InitializeResources(GameOptions &gameOptions)
 {
     LOG(">>>>> Initializing resource cache...");
 
@@ -741,9 +859,8 @@ bool BaseGameApp::InitializeResources(GameOptions& gameOptions)
 
     std::string rezArchivePath = gameOptions.assetsFolder + gameOptions.rezArchive;
 
-    IResourceFile* rezArchive = new ResourceRezArchive(rezArchivePath);
-
-    m_pResourceCache = new ResourceCache(gameOptions.resourceCacheSize, rezArchive, ORIGINAL_RESOURCE);
+    IResourceFile *rezArchive = new ResourceRezArchive(rezArchivePath);
+    std::shared_ptr<ResourceCache> m_pResourceCache{new ResourceCache(gameOptions.resourceCacheSize, rezArchive, ORIGINAL_RESOURCE)};
     if (!m_pResourceCache->Init())
     {
         LOG_ERROR("Failed to initialize resource cachce from resource file: " + std::string(rezArchivePath));
@@ -762,8 +879,8 @@ bool BaseGameApp::InitializeResources(GameOptions& gameOptions)
 
     std::string customArchivePath = gameOptions.assetsFolder + gameOptions.customArchive;
 
-    IResourceFile* pCustomArchive = new ResourceZipArchive(customArchivePath);
-    ResourceCache* pCustomCache = new ResourceCache(50, pCustomArchive, CUSTOM_RESOURCE);
+    IResourceFile *pCustomArchive = new ResourceZipArchive(customArchivePath);
+    std::shared_ptr<ResourceCache> pCustomCache{new ResourceCache(50, pCustomArchive, CUSTOM_RESOURCE)};
     if (!pCustomCache->Init())
     {
         LOG_ERROR("Failed to initialize resource cachce from resource file: " + customArchivePath);
@@ -788,7 +905,7 @@ bool BaseGameApp::InitializeResources(GameOptions& gameOptions)
 //---------------------------------------------------------------------------------------------------------------------
 // BaseGameApp::InitializeFont
 //---------------------------------------------------------------------------------------------------------------------
-bool BaseGameApp::InitializeFont(GameOptions& gameOptions)
+bool BaseGameApp::InitializeFont(GameOptions &gameOptions)
 {
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, ">>>>> Initializing font...");
 
@@ -813,15 +930,30 @@ bool BaseGameApp::InitializeFont(GameOptions& gameOptions)
 //---------------------------------------------------------------------------------------------------------------------
 // BaseGameApp::InitializeLocalization
 //---------------------------------------------------------------------------------------------------------------------
-bool BaseGameApp::InitializeLocalization(GameOptions& gameOptions)
+bool BaseGameApp::InitializeLocalization(GameOptions &gameOptions)
 {
+    return true;
+}
+
+bool BaseGameApp::InitializeTouchManager(GameOptions &gameOptions)
+{
+    auto &touchScreenConfig = GetControlOptions()->touchScreen;
+    if (touchScreenConfig.enable)
+    {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, ">>>>> Initializing touch resolver...");
+
+        m_pTouchManager = new TouchManager{};
+
+        LOG("Touch resolver successfully initialized...");
+    }
+
     return true;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 // BaseGameApp::InitializeControllers
 //---------------------------------------------------------------------------------------------------------------------
-bool BaseGameApp::InitializeControllers(GameOptions& gameOptions)
+bool BaseGameApp::InitializeControllers(GameOptions &gameOptions)
 {
     if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) != 0)
     {
@@ -837,7 +969,9 @@ bool BaseGameApp::InitializeControllers(GameOptions& gameOptions)
         {
             m_JoystickDeviceIndex = i;
             break;
-        } else {
+        }
+        else
+        {
             LOG_ERROR("Joysticks: Unable to use joystick! Error: " + std::string(SDL_GetError()));
         }
     }
@@ -899,7 +1033,9 @@ void BaseGameApp::HandleJoystickDeviceEvent(Uint32 type, Sint32 which)
             {
                 m_JoystickDeviceIndex = i;
                 break;
-            } else {
+            }
+            else
+            {
                 // LOG_ERROR("Joysticks: Unable to use joystick! Error: " + std::string(SDL_GetError()));
             }
         }
@@ -908,11 +1044,11 @@ void BaseGameApp::HandleJoystickDeviceEvent(Uint32 type, Sint32 which)
 
 //---------------------------------------------------------------------------------------------------------------------
 // BaseGameApp::ReadActorXmlPrototypes
-// 
+//
 //     Reads XML documents containing various actor prototypes which are then used to instantiate
 //     concrete actors
 //---------------------------------------------------------------------------------------------------------------------
-bool BaseGameApp::ReadActorXmlPrototypes(GameOptions& gameOptions)
+bool BaseGameApp::ReadActorXmlPrototypes(GameOptions &gameOptions)
 {
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, ">>>>> Loading actor prototypes...");
 
@@ -924,11 +1060,10 @@ bool BaseGameApp::ReadActorXmlPrototypes(GameOptions& gameOptions)
     }
 
     std::vector<std::string> xmlActorPrototypeFiles = m_pResourceMgr->VMatch("/ACTOR_PROTOTYPES/*.XML");
-    for (const std::string& protoFile : xmlActorPrototypeFiles)
-    {
-        //LOG("Actor proto: " + protoFile);
 
-        TiXmlElement* pActorProtoElem = XmlResourceLoader::LoadAndReturnRootXmlElement(protoFile.c_str());
+    for (const std::string &protoFile : xmlActorPrototypeFiles)
+    {
+        TiXmlElement *pActorProtoElem = XmlResourceLoader::LoadAndReturnRootXmlElement(protoFile.c_str());
         std::string protoName;
         if (!ParseAttributeFromXmlElem(&protoName, "ActorPrototypeName", pActorProtoElem))
         {
@@ -940,12 +1075,21 @@ bool BaseGameApp::ReadActorXmlPrototypes(GameOptions& gameOptions)
             ActorPrototype actorProto = StringToEnum_ActorPrototype(protoName);
 
             // Create our own pointer
-            TiXmlNode* pDuplicateNode = pActorProtoElem->Clone();
+            TiXmlNode *pDuplicateNode = pActorProtoElem->Clone();
             assert(pDuplicateNode);
-            TiXmlElement* pActorProtoElemDuplicate = pDuplicateNode->ToElement();
+            TiXmlElement *pActorProtoElemDuplicate = pDuplicateNode->ToElement();
             assert(pActorProtoElemDuplicate);
 
-            m_ActorXmlPrototypeMap.insert(std::make_pair(actorProto, pActorProtoElemDuplicate));
+            auto iter = m_ActorXmlPrototypeMap.insert(std::make_pair(actorProto, pActorProtoElemDuplicate));
+            if (!iter.second)
+            {
+                LOG_WARNING("Multi " + EnumToString_ActorPrototype(actorProto) + " actor prototype definitions! Fix ASSETS!");
+                std::string typeName;
+                if (ParseAttributeFromXmlElem(&typeName, "Type", pActorProtoElem))
+                {
+                    LOG_WARNING(typeName + " type won't be used!");
+                }
+            }
         }
     }
 
@@ -953,15 +1097,15 @@ bool BaseGameApp::ReadActorXmlPrototypes(GameOptions& gameOptions)
 
     // When I provide specific purpose API, I should be very dilligent
     for (int actorPrototypeIdx = ActorPrototype_Start + 1;
-        actorPrototypeIdx < ActorPrototype_Max;
-        actorPrototypeIdx++)
+         actorPrototypeIdx < ActorPrototype_Max;
+         actorPrototypeIdx++)
     {
         auto findIt = m_ActorXmlPrototypeMap.find(ActorPrototype(actorPrototypeIdx));
         if (findIt == m_ActorXmlPrototypeMap.end())
         {
-            LOG_ERROR("Actor prototype: \"" + 
-                EnumToString_ActorPrototype(ActorPrototype(actorPrototypeIdx)) +
-                std::string("\" was not found !"));
+            LOG_ERROR("Actor prototype: \"" +
+                      EnumToString_ActorPrototype(ActorPrototype(actorPrototypeIdx)) +
+                      std::string("\" was not found !"));
             loadedAllRequired = false;
         }
     }
@@ -978,7 +1122,7 @@ bool BaseGameApp::ReadActorXmlPrototypes(GameOptions& gameOptions)
     return loadedAllRequired;
 }
 
-bool BaseGameApp::ReadLevelMetadata(GameOptions& gameOptions)
+bool BaseGameApp::ReadLevelMetadata(GameOptions &gameOptions)
 {
     static const std::string LEVEL_METADATA_ARCHIVE_FOLDER = "/LEVEL_METADATA";
 
@@ -990,9 +1134,9 @@ bool BaseGameApp::ReadLevelMetadata(GameOptions& gameOptions)
     }
 
     std::vector<std::string> xmlLevelMetadataFiles = m_pResourceMgr->VMatch(LEVEL_METADATA_ARCHIVE_FOLDER + "/*.XML");
-    for (const std::string& metadataFile : xmlLevelMetadataFiles)
+    for (const std::string &metadataFile : xmlLevelMetadataFiles)
     {
-        TiXmlElement* pRootElem = XmlResourceLoader::LoadAndReturnRootXmlElement(metadataFile.c_str());
+        TiXmlElement *pRootElem = XmlResourceLoader::LoadAndReturnRootXmlElement(metadataFile.c_str());
         if (pRootElem == NULL)
         {
             LOG_ERROR("Failed to parse level metadata file: " + metadataFile);
@@ -1016,16 +1160,16 @@ bool BaseGameApp::ReadLevelMetadata(GameOptions& gameOptions)
         }
 
         // LevelMetadata.LogicsToActorPrototypes.*
-        TiXmlElement* pLogicToProtoRootElem = pRootElem->FirstChildElement("LogicsToActorPrototypes");
+        TiXmlElement *pLogicToProtoRootElem = pRootElem->FirstChildElement("LogicsToActorPrototypes");
         if (pLogicToProtoRootElem == NULL)
         {
             LOG_ERROR("Missing \"LogicsToActorPrototypes\" element in metadata file: " + metadataFile);
             return false;
         }
 
-        for (TiXmlElement* pLogicToProtoElem = pLogicToProtoRootElem->FirstChildElement("LogicToActorPrototype");
-            pLogicToProtoElem != NULL;
-            pLogicToProtoElem = pLogicToProtoElem->NextSiblingElement("LogicToActorPrototype"))
+        for (TiXmlElement *pLogicToProtoElem = pLogicToProtoRootElem->FirstChildElement("LogicToActorPrototype");
+             pLogicToProtoElem != NULL;
+             pLogicToProtoElem = pLogicToProtoElem->NextSiblingElement("LogicToActorPrototype"))
         {
             std::string logic;
             std::string protoStr;
@@ -1046,16 +1190,16 @@ bool BaseGameApp::ReadLevelMetadata(GameOptions& gameOptions)
         }
 
         // LevelMetadata.ClawSpawnPositions.*
-        TiXmlElement* pSpawnPositionsRootElem = pRootElem->FirstChildElement("ClawSpawnPositions");
+        TiXmlElement *pSpawnPositionsRootElem = pRootElem->FirstChildElement("ClawSpawnPositions");
         if (pSpawnPositionsRootElem == NULL)
         {
             LOG_ERROR("Missing \"ClawSpawnPositions\" element in metadata file: " + metadataFile);
             return false;
         }
 
-        for (TiXmlElement* pSpawnPositionElem = pSpawnPositionsRootElem->FirstChildElement("ClawSpawnPosition");
-            pSpawnPositionElem != NULL;
-            pSpawnPositionElem = pSpawnPositionElem->NextSiblingElement("ClawSpawnPosition"))
+        for (TiXmlElement *pSpawnPositionElem = pSpawnPositionsRootElem->FirstChildElement("ClawSpawnPosition");
+             pSpawnPositionElem != NULL;
+             pSpawnPositionElem = pSpawnPositionElem->NextSiblingElement("ClawSpawnPosition"))
         {
             std::string spawnNumberStr;
             int spawnNumber;
@@ -1071,8 +1215,7 @@ bool BaseGameApp::ReadLevelMetadata(GameOptions& gameOptions)
 
             if (!ParseValueFromXmlElem(&spawnPosition, pSpawnPositionElem, "x", "y"))
             {
-                LOG_ERROR("Missing spawn positon x and y in ClawSpawnPosition element in metadata file: "
-                    + metadataFile + " for spawnNumber: " + ToStr(spawnNumber));
+                LOG_ERROR("Missing spawn positon x and y in ClawSpawnPosition element in metadata file: " + metadataFile + " for spawnNumber: " + ToStr(spawnNumber));
                 return false;
             }
 
@@ -1080,16 +1223,16 @@ bool BaseGameApp::ReadLevelMetadata(GameOptions& gameOptions)
         }
 
         // LevelMetadata.TopLadderEnds.*
-        TiXmlElement* pTopLadderEndsRootElem = pRootElem->FirstChildElement("TopLadderEnds");
+        TiXmlElement *pTopLadderEndsRootElem = pRootElem->FirstChildElement("TopLadderEnds");
         if (pTopLadderEndsRootElem == NULL)
         {
             LOG_ERROR("Missing \"TopLadderEnds\" element in metadata file: " + metadataFile);
             return false;
         }
 
-        for (TiXmlElement* pTopLadderEndElem = pTopLadderEndsRootElem->FirstChildElement("TopLadderEnd");
-            pTopLadderEndElem != NULL;
-            pTopLadderEndElem = pTopLadderEndElem->NextSiblingElement("TopLadderEnd"))
+        for (TiXmlElement *pTopLadderEndElem = pTopLadderEndsRootElem->FirstChildElement("TopLadderEnd");
+             pTopLadderEndElem != NULL;
+             pTopLadderEndElem = pTopLadderEndElem->NextSiblingElement("TopLadderEnd"))
         {
             std::string tileIdStr;
             int tileId;
@@ -1105,8 +1248,7 @@ bool BaseGameApp::ReadLevelMetadata(GameOptions& gameOptions)
 
             if (!ParseValueFromXmlElem(&offset, pTopLadderEndElem, "offsetX", "offsetY"))
             {
-                LOG_ERROR("Missing ladder positon x and y in TopLadderEnd element in metadata file: "
-                    + metadataFile + " for tileId: " + ToStr(tileId));
+                LOG_ERROR("Missing ladder positon x and y in TopLadderEnd element in metadata file: " + metadataFile + " for tileId: " + ToStr(tileId));
                 return false;
             }
 
@@ -1114,7 +1256,7 @@ bool BaseGameApp::ReadLevelMetadata(GameOptions& gameOptions)
         }
 
         // LevelMetadata.TileDeathEffect
-        TiXmlElement* pTileDeathEffectElem = pRootElem->FirstChildElement("TileDeathEffect");
+        TiXmlElement *pTileDeathEffectElem = pRootElem->FirstChildElement("TileDeathEffect");
         if (pTileDeathEffectElem == NULL)
         {
             LOG_ERROR("Missing \"TileDeathEffect\" element in metadata file: " + metadataFile);
@@ -1126,13 +1268,12 @@ bool BaseGameApp::ReadLevelMetadata(GameOptions& gameOptions)
             LOG_ERROR("Missing \"type\" in TileDeathEffect element in metadata file: " + metadataFile);
             return false;
         }
-        
+
         if (pLevelMetadata->tileDeathEffectType != "NONE")
         {
             if (!ParseValueFromXmlElem(&pLevelMetadata->tileDeathEffectOffset, pTileDeathEffectElem, "offsetX", "offsetY"))
             {
-                LOG_ERROR("Missing death effect positon x and y in TileDeathEffect element in metadata file: "
-                    + metadataFile + " for type: " + pLevelMetadata->tileDeathEffectType);
+                LOG_ERROR("Missing death effect positon x and y in TileDeathEffect element in metadata file: " + metadataFile + " for type: " + pLevelMetadata->tileDeathEffectType);
                 return false;
             }
         }
@@ -1185,7 +1326,7 @@ Point BaseGameApp::GetScale()
     Point scale(1.0, 1.0);
 
     SDL_RenderGetScale(m_pRenderer, &scaleX, &scaleY);
-    
+
     scale.Set((double)scaleX, (double)scaleY);
 
     return scale;
@@ -1204,15 +1345,12 @@ uint32 BaseGameApp::GetWindowFlags()
 class TiXmlMergeVisitor : public TiXmlVisitor
 {
 public:
-
-    TiXmlMergeVisitor(TiXmlElement* pParentRootElem)
-        :
-        m_pParentRootElem(pParentRootElem)
+    TiXmlMergeVisitor(TiXmlElement *pParentRootElem)
+        : m_pParentRootElem(pParentRootElem)
     {
-
     }
 
-    virtual bool VisitEnter(const TiXmlElement& elem, const TiXmlAttribute* pAttribute) override
+    virtual bool VisitEnter(const TiXmlElement &elem, const TiXmlAttribute *pAttribute) override
     {
         std::string elemPath = GeTiXmlElementElementPath(&elem);
         /*LOG("Visiting element: " + std::string(elem.Value()) + " with path: " + elemPath);
@@ -1221,7 +1359,7 @@ public:
             LOG("Attribute value: " + std::string(pAttribute->Name()));
         }*/
 
-        if (TiXmlElement* pParentElemToBeModified = GetTiXmlElementFromPath(m_pParentRootElem, elemPath))
+        if (TiXmlElement *pParentElemToBeModified = GetTiXmlElementFromPath(m_pParentRootElem, elemPath))
         {
             // Check for attributes and text to be changed
             UpdateTiXmlElementAttributes(pParentElemToBeModified, &elem);
@@ -1233,11 +1371,11 @@ public:
 
             // First get parented node to which we will add the new one
             elemPath = elemPath.substr(0, elemPath.find_last_of("."));
-            TiXmlElement* pParentElemToWhichAdd = GetTiXmlElementFromPath(m_pParentRootElem, elemPath);
+            TiXmlElement *pParentElemToWhichAdd = GetTiXmlElementFromPath(m_pParentRootElem, elemPath);
             assert(pParentElemToWhichAdd != NULL);
 
             // Clone and add
-            TiXmlElement* pChildElemCopy = elem.Clone()->ToElement();
+            TiXmlElement *pChildElemCopy = elem.Clone()->ToElement();
             pParentElemToWhichAdd->LinkEndChild(pChildElemCopy);
 
             // We just added the whole subtree
@@ -1247,7 +1385,7 @@ public:
         return true;
     }
 
-    virtual bool VisitExit(const TiXmlElement& elem) override
+    virtual bool VisitExit(const TiXmlElement &elem) override
     {
         /*if (elem.Parent() == NULL)
         {
@@ -1259,7 +1397,7 @@ public:
     }
 
 private:
-    std::string GeTiXmlElementElementPath(const TiXmlElement* pElem)
+    std::string GeTiXmlElementElementPath(const TiXmlElement *pElem)
     {
         assert(pElem != NULL);
         std::string path = pElem->Value();
@@ -1273,12 +1411,12 @@ private:
         return path;
     }
 
-    int UpdateTiXmlElementAttributes(TiXmlElement* updateThis, const TiXmlElement* withThis)
+    int UpdateTiXmlElementAttributes(TiXmlElement *updateThis, const TiXmlElement *withThis)
     {
         int numModifiedAttributes = 0;
-        for (const TiXmlAttribute* pNewAttr = withThis->FirstAttribute();
-            pNewAttr != NULL;
-            pNewAttr = pNewAttr->Next())
+        for (const TiXmlAttribute *pNewAttr = withThis->FirstAttribute();
+             pNewAttr != NULL;
+             pNewAttr = pNewAttr->Next())
         {
             updateThis->SetAttribute(pNewAttr->Name(), pNewAttr->Value());
             //LOG("Updated parent's [" + std::string(pNewAttr->Name()) + "] attribute with value [" + std::string(pNewAttr->Value()) + "]");
@@ -1288,7 +1426,7 @@ private:
         return numModifiedAttributes;
     }
 
-    bool UpdateTiXmlElementText(TiXmlElement* updateThis, const TiXmlElement* withThis)
+    bool UpdateTiXmlElementText(TiXmlElement *updateThis, const TiXmlElement *withThis)
     {
         if (withThis->GetText() == NULL)
         {
@@ -1298,11 +1436,11 @@ private:
         return SetTiXmlElementText(withThis->GetText(), updateThis);
     }
 
-    TiXmlElement* m_pParentRootElem;
+    TiXmlElement *m_pParentRootElem;
 };
 
 // Remark: Caller is getting a NEW copy of the prototype -> caller is responsible for freeing this copy !
-TiXmlElement* BaseGameApp::GetActorPrototypeElem(ActorPrototype proto)
+TiXmlElement *BaseGameApp::GetActorPrototypeElem(ActorPrototype proto)
 {
     auto findIt = m_ActorXmlPrototypeMap.find(proto);
     if (findIt == m_ActorXmlPrototypeMap.end())
@@ -1311,17 +1449,17 @@ TiXmlElement* BaseGameApp::GetActorPrototypeElem(ActorPrototype proto)
     }
     assert(findIt != m_ActorXmlPrototypeMap.end());
 
-    TiXmlNode* pCopy = findIt->second->Clone()->ToElement();
+    TiXmlElement *pCopy = findIt->second->Clone()->ToElement();
     assert(pCopy != NULL);
 
-    TiXmlElement* pRootElem = pCopy->ToElement();
+    TiXmlElement *pRootElem = pCopy;
     assert(pRootElem != NULL);
 
     // If this is derived XML, load its parent and apply its changes
     if (pRootElem->Attribute("Parent") != NULL)
     {
         ActorPrototype parentProto = StringToEnum_ActorPrototype(pRootElem->Attribute("Parent"));
-        TiXmlElement* pParentRootElem = GetActorPrototypeElem(parentProto);
+        TiXmlElement *pParentRootElem = GetActorPrototypeElem(parentProto);
         assert(pParentRootElem != NULL);
 
         // Merge changes from child to parent (child contains only delta changes)
@@ -1340,24 +1478,25 @@ TiXmlElement* BaseGameApp::GetActorPrototypeElem(ActorPrototype proto)
         return pParentRootElem;
     }
 
-    return pCopy->ToElement();
+    return pCopy;
 }
 
 //=====================================================================================================================
 // Events
 //=====================================================================================================================
 
-
 void BaseGameApp::RegisterAllDelegates()
 {
     IEventMgr::Get()->VAddListener(MakeDelegate(
-        this, &BaseGameApp::QuitGameDelegate), EventData_Quit_Game::sk_EventType);
+                                       this, &BaseGameApp::QuitGameDelegate),
+                                   EventData_Quit_Game::sk_EventType);
 }
 
 void BaseGameApp::RemoveAllDelegates()
 {
     IEventMgr::Get()->VRemoveListener(MakeDelegate(
-        this, &BaseGameApp::QuitGameDelegate), EventData_Quit_Game::sk_EventType);
+                                          this, &BaseGameApp::QuitGameDelegate),
+                                      EventData_Quit_Game::sk_EventType);
 }
 
 void BaseGameApp::QuitGameDelegate(IEventDataPtr pEventData)
@@ -1370,9 +1509,9 @@ void BaseGameApp::QuitGameDelegate(IEventDataPtr pEventData)
 // XML config management
 //=====================================================================================================================
 
-TiXmlElement* CreateDefaultDisplayConfig()
+TiXmlElement *CreateDefaultDisplayConfig()
 {
-    TiXmlElement* display = new TiXmlElement("Display");
+    TiXmlElement *display = new TiXmlElement("Display");
 
     XML_ADD_2_PARAM_ELEMENT("Size", "width", ToStr(1280).c_str(), "height", ToStr(768).c_str(), display);
     XML_ADD_TEXT_ELEMENT("Scale", "1", display);
@@ -1383,9 +1522,9 @@ TiXmlElement* CreateDefaultDisplayConfig()
     return display;
 }
 
-TiXmlElement* CreateDefaultAudioConfig()
+TiXmlElement *CreateDefaultAudioConfig()
 {
-    TiXmlElement* audio = new TiXmlElement("Audio");
+    TiXmlElement *audio = new TiXmlElement("Audio");
 
     XML_ADD_TEXT_ELEMENT("Frequency", "44100", audio);
     XML_ADD_TEXT_ELEMENT("SoundChannels", "1", audio);
@@ -1398,9 +1537,9 @@ TiXmlElement* CreateDefaultAudioConfig()
     return audio;
 }
 
-TiXmlElement* CreateDefaultFontConfig()
+TiXmlElement *CreateDefaultFontConfig()
 {
-    TiXmlElement* font = new TiXmlElement("Font");
+    TiXmlElement *font = new TiXmlElement("Font");
 
     XML_ADD_TEXT_ELEMENT("Font", "clacon.ttf", font);
     XML_ADD_2_PARAM_ELEMENT("ConsoleFont", "font", "clacon.ttf", "size", "20", font);
@@ -1408,9 +1547,9 @@ TiXmlElement* CreateDefaultFontConfig()
     return font;
 }
 
-TiXmlElement* CreateDefaultAssetsConfig()
+TiXmlElement *CreateDefaultAssetsConfig()
 {
-    TiXmlElement* assets = new TiXmlElement("Assets");
+    TiXmlElement *assets = new TiXmlElement("Assets");
 
     XML_ADD_TEXT_ELEMENT("RezArchive", "CLAW.REZ", assets);
     XML_ADD_TEXT_ELEMENT("ResourceCacheSize", "50", assets);
@@ -1420,52 +1559,52 @@ TiXmlElement* CreateDefaultAssetsConfig()
     return assets;
 }
 
-TiXmlElement* CreateDefaultConsoleConfig()
+TiXmlElement *CreateDefaultConsoleConfig()
 {
-TiXmlElement* pConsoleConfig = new TiXmlElement("Console");
+    TiXmlElement *pConsoleConfig = new TiXmlElement("Console");
 
     // Assume that the default constructor has default values set
     ConsoleConfig defaultConfig;
 
     XML_ADD_TEXT_ELEMENT("BackgroundImagePath",
-        defaultConfig.backgroundImagePath.c_str(), pConsoleConfig);
+                         defaultConfig.backgroundImagePath.c_str(), pConsoleConfig);
     XML_ADD_TEXT_ELEMENT("StretchBackgroundImage",
-        ToStr(defaultConfig.stretchBackgroundImage).c_str(), pConsoleConfig);
+                         ToStr(defaultConfig.stretchBackgroundImage).c_str(), pConsoleConfig);
     XML_ADD_TEXT_ELEMENT("WidthRatio",
-        ToStr(defaultConfig.widthRatio).c_str(), pConsoleConfig);
+                         ToStr(defaultConfig.widthRatio).c_str(), pConsoleConfig);
     XML_ADD_TEXT_ELEMENT("HeightRatio",
-        ToStr(defaultConfig.heightRatio).c_str(), pConsoleConfig);
+                         ToStr(defaultConfig.heightRatio).c_str(), pConsoleConfig);
     XML_ADD_TEXT_ELEMENT("LineSeparatorHeight",
-        ToStr(defaultConfig.lineSeparatorHeight).c_str(), pConsoleConfig);
+                         ToStr(defaultConfig.lineSeparatorHeight).c_str(), pConsoleConfig);
     XML_ADD_TEXT_ELEMENT("CommandPromptOffsetY",
-        ToStr(defaultConfig.commandPromptOffsetY).c_str(), pConsoleConfig);
+                         ToStr(defaultConfig.commandPromptOffsetY).c_str(), pConsoleConfig);
     XML_ADD_TEXT_ELEMENT("ConsoleAnimationSpeed",
-        ToStr(defaultConfig.consoleAnimationSpeed).c_str(), pConsoleConfig);
+                         ToStr(defaultConfig.consoleAnimationSpeed).c_str(), pConsoleConfig);
     XML_ADD_TEXT_ELEMENT("FontPath",
-        defaultConfig.fontPath.c_str(), pConsoleConfig);
+                         defaultConfig.fontPath.c_str(), pConsoleConfig);
 
-    TiXmlElement* pColorElem = new TiXmlElement("FontColor");
+    TiXmlElement *pColorElem = new TiXmlElement("FontColor");
     pColorElem->SetAttribute("r", defaultConfig.fontColor.r);
     pColorElem->SetAttribute("g", defaultConfig.fontColor.g);
     pColorElem->SetAttribute("b", defaultConfig.fontColor.b);
     pConsoleConfig->LinkEndChild(pColorElem);
 
     XML_ADD_TEXT_ELEMENT("FontHeight",
-        ToStr(defaultConfig.fontHeight).c_str(), pConsoleConfig);
+                         ToStr(defaultConfig.fontHeight).c_str(), pConsoleConfig);
     XML_ADD_TEXT_ELEMENT("LeftOffset",
-        ToStr(defaultConfig.leftOffset).c_str(), pConsoleConfig);
+                         ToStr(defaultConfig.leftOffset).c_str(), pConsoleConfig);
     XML_ADD_TEXT_ELEMENT("CommandPrompt",
-        defaultConfig.commandPrompt.c_str(), pConsoleConfig);
+                         defaultConfig.commandPrompt.c_str(), pConsoleConfig);
 
     return pConsoleConfig;
 }
 
-TiXmlDocument BaseGameApp::CreateAndReturnDefaultConfig(const char* inConfigFile)
+TiXmlDocument BaseGameApp::CreateAndReturnDefaultConfig(const char *inConfigFile)
 {
     TiXmlDocument xmlConfig;
 
     //----- [Configuration]
-    TiXmlElement* root = new TiXmlElement("Configuration");
+    TiXmlElement *root = new TiXmlElement("Configuration");
     xmlConfig.LinkEndChild(root);
 
     root->LinkEndChild(CreateDefaultDisplayConfig());
@@ -1477,4 +1616,18 @@ TiXmlDocument BaseGameApp::CreateAndReturnDefaultConfig(const char* inConfigFile
     xmlConfig.SaveFile(inConfigFile);
 
     return xmlConfig;
+}
+
+void BaseGameApp::RegisterTouchRecognizers(ITouchHandler &touchHandler)
+{
+    if (m_pTouchManager)
+    {
+        m_pTouchManager->RemoveAllRecognizers();
+        m_pTouchManager->AddRecognizers(touchHandler.VRegisterRecognizers());
+    }
+}
+
+std::shared_ptr<ResourceCache> BaseGameApp::GetResourceCache() const
+{
+    return m_pResourceMgr->VGetResourceCacheFromName(ORIGINAL_RESOURCE);
 }

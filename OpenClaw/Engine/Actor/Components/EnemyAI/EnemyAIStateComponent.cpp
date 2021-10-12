@@ -92,7 +92,7 @@ static shared_ptr<EnemyAttackAction> XmlToEnemyAttackActionPtr(TiXmlElement* pEl
 // BaseEnemyAIStateComponent
 //=====================================================================================================================
 
-BaseEnemyAIStateComponent::BaseEnemyAIStateComponent(std::string stateName)
+BaseEnemyAIStateComponent::BaseEnemyAIStateComponent(const std::string &stateName)
     :
     m_IsActive(false),
     m_StatePriority(-1),
@@ -110,7 +110,7 @@ bool BaseEnemyAIStateComponent::VInit(TiXmlElement* pData)
 {
     assert(pData);
 
-    assert(ParseValueFromXmlElem(&m_StatePriority, pData->FirstChildElement("StatePriority")));
+    DO_AND_CHECK(ParseValueFromXmlElem(&m_StatePriority, pData->FirstChildElement("StatePriority")));
 
     return VDelegateInit(pData);
 }
@@ -119,10 +119,8 @@ void BaseEnemyAIStateComponent::VPostInit()
 {
     m_pAnimationComponent = 
         MakeStrongPtr(m_pOwner->GetComponent<AnimationComponent>(AnimationComponent::g_Name)).get();
-    m_pPhysicsComponent =
-        MakeStrongPtr(m_pOwner->GetComponent<PhysicsComponent>(PhysicsComponent::g_Name)).get();
-    m_pPositionComponent =
-        MakeStrongPtr(m_pOwner->GetComponent<PositionComponent>(PositionComponent::g_Name)).get();
+    m_pPhysicsComponent = m_pOwner->GetPhysicsComponent().get();
+    m_pPositionComponent = m_pOwner->GetPositionComponent().get();
     m_pEnemyAIComponent = 
         MakeStrongPtr(m_pOwner->GetComponent<EnemyAIComponent>(EnemyAIComponent::g_Name)).get();
     m_pRenderComponent =
@@ -245,7 +243,7 @@ FallAIStateComponent::FallAIStateComponent()
 
 bool FallAIStateComponent::VDelegateInit(TiXmlElement* pData)
 {
-    assert(ParseValueFromXmlElem(&m_FallAnimation, pData->FirstChildElement("FallAnimation")));
+    DO_AND_CHECK(ParseValueFromXmlElem(&m_FallAnimation, pData->FirstChildElement("FallAnimation")));
 
     return true;
 }
@@ -405,14 +403,17 @@ bool PatrolEnemyAIStateComponent::VDelegateInit(TiXmlElement* pData)
             m_IdleSoundList.push_back(pSoundElem->GetText());
         }
 
-        assert(ParseValueFromXmlElem(&m_IdleSpeechSoundMaxDistance, pElem->FirstChildElement("IdleSpeechSoundMaxDistance")));
-        assert(ParseValueFromXmlElem(&m_IdleSpeechSoundPlayChance, pElem->FirstChildElement("IdleSpeechSoundPlayChance")));
+        DO_AND_CHECK(ParseValueFromXmlElem(&m_IdleSpeechSoundMaxDistance, pElem->FirstChildElement("IdleSpeechSoundMaxDistance")));
+        DO_AND_CHECK(ParseValueFromXmlElem(&m_IdleSpeechSoundPlayChance, pElem->FirstChildElement("IdleSpeechSoundPlayChance")));
     }
 
     /*m_LeftPatrolBorder = 6330;
     m_RightPatrolBorder = 6550;*/
     
-    assert(fabs(m_PatrolSpeed) > DBL_EPSILON);
+    if (!m_IsAlwaysIdle)
+    {
+        assert(fabs(m_PatrolSpeed) > DBL_EPSILON);
+    }
 
     assert(m_pWalkAction != nullptr);
     assert(!m_pWalkAction->animations.empty());
@@ -533,7 +534,7 @@ void PatrolEnemyAIStateComponent::VOnAnimationLooped(Animation* pAnimation)
     }
 }
 
-double PatrolEnemyAIStateComponent::FindClosestHole(Point center, int height, float maxSearchDistance)
+double PatrolEnemyAIStateComponent::FindClosestHole(const Point &center, int height, float maxSearchDistance)
 {
     double leftDelta = 0.0;
     for (leftDelta = 0.0; leftDelta < fabs(maxSearchDistance); leftDelta += 1.0)
@@ -824,8 +825,8 @@ bool ParryEnemyAIStateComponent::VDelegateInit(TiXmlElement* pData)
         }
     }
 
-    assert(ParseValueFromXmlElem(&m_ParryAnimFrameIdx, pData->FirstChildElement("ParryAnimFrameIdx")));
-    assert(ParseValueFromXmlElem(&m_ParryAnimation, pData->FirstChildElement("ParryAnimation")));
+    DO_AND_CHECK(ParseValueFromXmlElem(&m_ParryAnimFrameIdx, pData->FirstChildElement("ParryAnimFrameIdx")));
+    DO_AND_CHECK(ParseValueFromXmlElem(&m_ParryAnimation, pData->FirstChildElement("ParryAnimation")));
 
     assert(m_ParrySoundList.size() > 0);
     assert(m_ParryChanceMap.size() > 0);
@@ -915,7 +916,7 @@ bool ParryEnemyAIStateComponent::CanParry(DamageType damageType, EnemyAIState cu
 // BaseAttackAIStateComponent
 //=====================================================================================================================
 
-BaseAttackAIStateComponent::BaseAttackAIStateComponent(std::string stateName)
+BaseAttackAIStateComponent::BaseAttackAIStateComponent(const std::string &stateName)
     :
     m_AttackDelay(0),
     m_AttackSpeechSoundPlayChance(0),
@@ -963,7 +964,7 @@ bool BaseAttackAIStateComponent::VDelegateInit(TiXmlElement* pData)
             m_AttackSpeechSoundList.push_back(pSoundElem->GetText());
         }
 
-        assert(ParseValueFromXmlElem(&m_AttackSpeechSoundPlayChance, pElem->FirstChildElement("AttackSpeechSoundPlayChance")));
+        DO_AND_CHECK(ParseValueFromXmlElem(&m_AttackSpeechSoundPlayChance, pElem->FirstChildElement("AttackSpeechSoundPlayChance")));
     }
 
     assert(!m_AttackActions.empty());
@@ -981,7 +982,7 @@ void BaseAttackAIStateComponent::VPostInit()
 
 void BaseAttackAIStateComponent::VPostPostInit()
 {
-    for (shared_ptr<EnemyAttackAction> pAttackAction : m_AttackActions)
+    for (const shared_ptr<EnemyAttackAction> &pAttackAction : m_AttackActions)
     {
         g_pApp->GetGameLogic()->VGetGamePhysics()->VAddActorFixtureToBody(
             m_pOwner->GetGUID(),
@@ -998,6 +999,7 @@ void BaseAttackAIStateComponent::VOnStateEnter(BaseEnemyAIStateComponent* pPrevi
 
     m_CurrentAttackActionIdx = 0;
     VExecuteAttack();
+    m_pAnimationComponent->SetDelay(m_AttackDelay);
 }
 
 void BaseAttackAIStateComponent::VOnStateLeave(BaseEnemyAIStateComponent* pNextState)
@@ -1136,8 +1138,7 @@ Actor* BaseAttackAIStateComponent::FindClosestHostileActor()
     {
         assert(pHostileActor != NULL);
 
-        shared_ptr<PositionComponent> pHostileActorPositionComponent =
-            MakeStrongPtr(pHostileActor->GetComponent<PositionComponent>(PositionComponent::g_Name));
+        shared_ptr<PositionComponent> pHostileActorPositionComponent = pHostileActor->GetPositionComponent();
         assert(pHostileActorPositionComponent);
 
         Point positionDiff = pHostileActorPositionComponent->GetPosition() - m_pPositionComponent->GetPosition();
@@ -1164,8 +1165,7 @@ Point BaseAttackAIStateComponent::FindClosestHostileActorOffset()
         return closest;
     }
 
-    shared_ptr<PositionComponent> pHostileActorPositionComponent =
-        MakeStrongPtr(pClosestEnemy->GetComponent<PositionComponent>(PositionComponent::g_Name));
+    shared_ptr<PositionComponent> pHostileActorPositionComponent = pClosestEnemy->GetPositionComponent();
     assert(pHostileActorPositionComponent);
 
     return pHostileActorPositionComponent->GetPosition() - m_pPositionComponent->GetPosition();
@@ -1181,9 +1181,13 @@ bool BaseAttackAIStateComponent::VCanEnter()
     // TODO: Only Claw is the enemy at the moment, if the need to have more enemies arises, this needs to be changed
     // Since the first found actor is picked
 
+    // TODO: Revisit this if enemy ever has more than one attack action per AttackAIStateComponent
+    EnemyAttackAction& action = *m_AttackActions[m_CurrentAttackActionIdx];
+
     // Check if enemy is within line of sight
-    Point fromPoint = m_pOwner->GetPositionComponent()->GetPosition();
-    Point toPoint = m_EnemyAgroList[0]->GetPositionComponent()->GetPosition();
+    Point fromPoint = m_pOwner->GetPositionComponent()->GetPosition() + action.agroSensorFixture.offset;
+    Point toPoint(m_EnemyAgroList[0]->GetPositionComponent()->GetPosition().x,
+            m_pOwner->GetPositionComponent()->GetPosition().y + action.agroSensorFixture.offset.y);
 
     RaycastResult raycastResult = g_pApp->GetGameLogic()->VGetGamePhysics()->VRayCast(
         fromPoint, 
@@ -1455,10 +1459,10 @@ bool DiveAttackAIStateComponent::VDelegateInit(TiXmlElement* pData)
 {
     assert(pData);
 
-    assert(ParseValueFromXmlElem(&m_DiveSound, pData->FirstChildElement("DiveSound")));
-    assert(ParseValueFromXmlElem(&m_DiveInAnimation, pData->FirstChildElement("DiveInAnimation")));
-    assert(ParseValueFromXmlElem(&m_DiveOutAnimation, pData->FirstChildElement("DiveOutAnimation")));
-    assert(ParseValueFromXmlElem(&m_DiveSpeed, pData->FirstChildElement("DiveSpeed")));
+    DO_AND_CHECK(ParseValueFromXmlElem(&m_DiveSound, pData->FirstChildElement("DiveSound")));
+    DO_AND_CHECK(ParseValueFromXmlElem(&m_DiveInAnimation, pData->FirstChildElement("DiveInAnimation")));
+    DO_AND_CHECK(ParseValueFromXmlElem(&m_DiveOutAnimation, pData->FirstChildElement("DiveOutAnimation")));
+    DO_AND_CHECK(ParseValueFromXmlElem(&m_DiveSpeed, pData->FirstChildElement("DiveSpeed")));
 
     for (TiXmlElement* pElem = pData->FirstChildElement("DiveAreaSensorFixture");
         pElem != NULL;
@@ -1624,7 +1628,7 @@ bool BaseBossAIStateComponennt::VDelegateInit(TiXmlElement* pData)
 {
     assert(pData);
 
-    assert(ParseValueFromXmlElem(&m_BossDialogAnimation, pData->FirstChildElement("BossDialogAnimation")));
+    DO_AND_CHECK(ParseValueFromXmlElem(&m_BossDialogAnimation, pData->FirstChildElement("BossDialogAnimation")));
 
     return true;
 }
@@ -1888,9 +1892,9 @@ bool RollEnemyAIStateComponent::VDelegateInit(TiXmlElement* pData)
     m_pPhysics = g_pApp->GetGameLogic()->VGetGamePhysics();
     assert(m_pPhysics);
 
-    assert(ParseValueFromXmlElem(&m_RollSpeed, pData->FirstChildElement("RollSpeed")));
-    assert(ParseValueFromXmlElem(&m_ForwardRollAnimation, pData->FirstChildElement("ForwardRollAnimation")));
-    assert(ParseValueFromXmlElem(&m_BackwardRollAnimation, pData->FirstChildElement("BackwardRollAnimation")));
+    DO_AND_CHECK(ParseValueFromXmlElem(&m_RollSpeed, pData->FirstChildElement("RollSpeed")));
+    DO_AND_CHECK(ParseValueFromXmlElem(&m_ForwardRollAnimation, pData->FirstChildElement("ForwardRollAnimation")));
+    DO_AND_CHECK(ParseValueFromXmlElem(&m_BackwardRollAnimation, pData->FirstChildElement("BackwardRollAnimation")));
     m_RollSensorFixtureDef = ActorTemplates::XmlToActorFixtureDef(pData->FirstChildElement("RollSensorFixtureDef"));
 
     return true;

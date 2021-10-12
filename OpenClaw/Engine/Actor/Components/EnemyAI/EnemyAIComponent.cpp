@@ -89,7 +89,7 @@ bool EnemyAIComponent::VInit(TiXmlElement* pData)
 void EnemyAIComponent::VPostInit()
 {
     m_pRenderComponent = MakeStrongPtr(m_pOwner->GetComponent<ActorRenderComponent>(ActorRenderComponent::g_Name));
-    m_pPositionComponent = MakeStrongPtr(m_pOwner->GetComponent<PositionComponent>(PositionComponent::g_Name));
+    m_pPositionComponent = m_pOwner->GetPositionComponent();
     assert(m_pRenderComponent);
     assert(m_pPositionComponent);
 
@@ -123,10 +123,9 @@ void EnemyAIComponent::VUpdate(uint32 msDiff)
                 shared_ptr<EventData_Move_Actor> pEvent(new EventData_Move_Actor(m_pOwner->GetGUID(), m_pPositionComponent->GetPosition()));
                 IEventMgr::Get()->VTriggerEvent(pEvent);
 
-                SDL_Rect dummy;
                 SDL_Rect renderRect = m_pRenderComponent->VGetPositionRect();
                 SDL_Rect cameraRect = pCamera->GetCameraRect();
-                if (!SDL_IntersectRect(&renderRect, &cameraRect, &dummy))
+                if (!SDL_HasIntersection(&renderRect, &cameraRect))
                 {
                     shared_ptr<EventData_Destroy_Actor> pEvent(new EventData_Destroy_Actor(m_pOwner->GetGUID()));
                     IEventMgr::Get()->VQueueEvent(pEvent);
@@ -160,7 +159,7 @@ void EnemyAIComponent::VUpdate(uint32 msDiff)
 void EnemyAIComponent::VOnHealthBelowZero(DamageType damageType, int sourceActorId)
 {
     m_bDead = true;
-    for (auto stateComponentIter : m_StateMap)
+    for (const auto &stateComponentIter : m_StateMap)
     {
         if (stateComponentIter.second->IsActive())
         {
@@ -168,11 +167,10 @@ void EnemyAIComponent::VOnHealthBelowZero(DamageType damageType, int sourceActor
         }
     }
 
-    // Play deaht sound
+    // Play death sound
     Util::PlayRandomSoundFromList(m_DeathSounds);
 
-    shared_ptr<PhysicsComponent> pPhysicsComponent =
-        MakeStrongPtr(m_pOwner->GetComponent<PhysicsComponent>(PhysicsComponent::g_Name));
+    shared_ptr<PhysicsComponent> pPhysicsComponent = m_pOwner->GetPhysicsComponent();
     assert(pPhysicsComponent);
 
     pPhysicsComponent->Destroy();
@@ -244,7 +242,7 @@ void EnemyAIComponent::LeaveAllStates(BaseEnemyAIStateComponent* pNextState)
     }
 }
 
-void EnemyAIComponent::EnterState(std::string stateName)
+void EnemyAIComponent::EnterState(const std::string &stateName)
 {
     BaseEnemyAIStateComponent* pCurrentState = GetCurrentState();
 
@@ -259,7 +257,7 @@ void EnemyAIComponent::EnterState(EnemyAIState state)
 {
     BaseEnemyAIStateComponent* pCurrentState = GetCurrentState();
 
-    for (auto stateIter : m_StateMap)
+    for (const auto &stateIter : m_StateMap)
     {
         if (stateIter.second->VGetStateType() == state)
         {
@@ -304,7 +302,7 @@ bool EnemyAIComponent::EnterBestState(bool canForceEnter)
     BaseEnemyAIStateComponent* pBestState = NULL;
     int bestStatePrio = -1;
 
-    for (auto stateIter : m_StateMap)
+    for (const auto &stateIter : m_StateMap)
     {
         BaseEnemyAIStateComponent* pState = stateIter.second;
         if (pState == pCurrentState)
@@ -342,7 +340,7 @@ bool EnemyAIComponent::EnterBestState(bool canForceEnter)
 
 BaseEnemyAIStateComponent* EnemyAIComponent::GetCurrentState()
 {
-    for (auto stateIter : m_StateMap)
+    for (const auto &stateIter : m_StateMap)
     {
         if (stateIter.second->IsActive())
         {
@@ -357,7 +355,7 @@ BaseEnemyAIStateComponent* EnemyAIComponent::GetCurrentState()
 
 BaseEnemyAIStateComponent* EnemyAIComponent::GetState(EnemyAIState state)
 {
-    for (auto stateIter : m_StateMap)
+    for (const auto &stateIter : m_StateMap)
     {
         if (stateIter.second->VGetStateType() == state)
         {
@@ -368,15 +366,14 @@ BaseEnemyAIStateComponent* EnemyAIComponent::GetState(EnemyAIState state)
     return NULL;
 }
 
-bool EnemyAIComponent::HasState(std::string stateName)
+bool EnemyAIComponent::HasState(const std::string &stateName)
 {
-    auto findIt = m_StateMap.find(stateName);
-    return findIt != m_StateMap.end();
+    return m_StateMap.count(stateName) > 0;
 }
 
 bool EnemyAIComponent::HasState(EnemyAIState state)
 {
-    for (auto stateIter : m_StateMap)
+    for (const auto &stateIter : m_StateMap)
     {
         if (stateIter.second->VGetStateType() == state)
         {

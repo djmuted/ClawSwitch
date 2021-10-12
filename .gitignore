@@ -32,3 +32,10 @@ Build_Release/vim.exe.stackdump
 *.iobj
 *.ipdb
 *.exp
+OpenClaw.elf
+OpenClaw.nacp
+OpenClaw.npdm
+OpenClaw.nro
+OpenClaw.nso
+OpenClaw.pfs0
+.vscode

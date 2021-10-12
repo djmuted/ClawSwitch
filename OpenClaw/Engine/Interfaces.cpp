@@ -11,6 +11,8 @@ std::string EnumToString_ActorPrototype(ActorPrototype actorProto)
     static std::map<ActorPrototype, std::string> actorPrototypeEnumToStringMap =
     {
         // Actor enemies
+        { ActorPrototype_Null, "ActorPrototype_Null" },
+
         { ActorPrototype_BaseEnemy, "ActorPrototype_BaseEnemy" },
 
         { ActorPrototype_Level1_Soldier, "ActorPrototype_Level1_Soldier" },
@@ -62,6 +64,8 @@ std::string EnumToString_ActorPrototype(ActorPrototype actorProto)
         { ActorPrototype_Level2_TowerCannonRight, "ActorPrototype_Level2_TowerCannonRight" },
 
         // Projectiles
+        { ActorPrototype_Level1_RatBomb, "ActorPrototype_Level1_RatBomb" },
+
         { ActorPrototype_Level2_CannonBall, "ActorPrototype_Level2_CannonBall" },
         { ActorPrototype_Level2_RatProjectile, "ActorPrototype_Level2_RatProjectile" },
 
@@ -123,6 +127,10 @@ std::string EnumToString_ActorPrototype(ActorPrototype actorProto)
 
         // Floor Spike
         { ActorPrototype_BaseFloorSpike, "ActorPrototype_BaseFloorSpike" },
+        { ActorPrototype_Level3_FloorSpike, "ActorPrototype_Level3_FloorSpike" },
+        { ActorPrototype_Level4_FloorSpike, "ActorPrototype_Level4_FloorSpike" },
+        { ActorPrototype_Level12_FloorSpike, "ActorPrototype_Level12_FloorSpike" },
+        { ActorPrototype_Level13_FloorSpike, "ActorPrototype_Level13_FloorSpike" },
 
         // Rope
         { ActorPrototype_BaseRope, "ActorPrototype_BaseRope" },
@@ -192,8 +200,8 @@ std::string EnumToString_ActorPrototype(ActorPrototype actorProto)
         { ActorPrototype_Level10_MarrowFloor, "ActorPrototype_Level10_MarrowFloor" },
         { ActorPrototype_Level10_MarrowParrot, "ActorPrototype_Level10_MarrowParrot" },
         { ActorPrototype_Level10_BossGem, "ActorPrototype_Level10_BossGem" },
-		
-		// Level 11
+
+        // Level 11
         { ActorPrototype_Level11_Mercat, "ActorPrototype_Level11_Mercat" },
         { ActorPrototype_Level11_Siren, "ActorPrototype_Level11_Siren" },
         { ActorPrototype_Level11_Fish, "ActorPrototype_Level11_Fish" },
@@ -203,7 +211,30 @@ std::string EnumToString_ActorPrototype(ActorPrototype actorProto)
         { ActorPrototype_Level11_Laser, "ActorPrototype_Level11_Laser" },
         { ActorPrototype_Level11_SirenProjectile, "ActorPrototype_Level11_SirenProjectile" },
         { ActorPrototype_Level11_TridentProjectile, "ActorPrototype_Level11_TridentProjectile" },
-		
+
+        // Level 12
+        { ActorPrototype_Level12_Mercat, "ActorPrototype_Level12_Mercat" },
+        { ActorPrototype_Level12_CrumblingPeg, "ActorPrototype_Level12_CrumblingPeg" },
+        { ActorPrototype_Level12_Siren, "ActorPrototype_Level12_Siren" },
+        { ActorPrototype_Level12_Fish, "ActorPrototype_Level12_Fish" },
+        { ActorPrototype_Level12_TogglePeg, "ActorPrototype_Level12_TogglePeg" },
+        { ActorPrototype_Level12_Aquatis, "ActorPrototype_Level12_Aquatis" },
+        { ActorPrototype_Level12_RockSpring, "ActorPrototype_Level12_RockSpring" },
+        { ActorPrototype_Level12_PathElevator, "ActorPrototype_Level12_PathElevator" },
+        { ActorPrototype_Level12_BossStager, "ActorPrototype_Level12_BossStager" },
+        { ActorPrototype_Level12_BossGem, "ActorPrototype_Level12_BossGem" },
+
+        // Level 13
+        { ActorPrototype_Level13_BearSailor, "ActorPrototype_Level13_BearSailor" },
+        { ActorPrototype_Level13_RedTailPirate, "ActorPrototype_Level13_RedTailPirate" },
+        { ActorPrototype_Level13_WaterRock, "ActorPrototype_Level13_WaterRock" },
+        { ActorPrototype_Level13_SpringBoard, "ActorPrototype_Level13_SpringBoard" },
+        { ActorPrototype_Level13_PathElevator, "ActorPrototype_Level13_PathElevator" },
+        { ActorPrototype_Level13_TogglePeg, "ActorPrototype_Level13_TogglePeg" },
+        { ActorPrototype_Level13_CrumblingPeg, "ActorPrototype_Level13_CrumblingPeg" },
+        { ActorPrototype_Level13_SteppingGround, "ActorPrototype_Level13_SteppingGround" },
+        { ActorPrototype_Level13_PuffDartSpawner, "ActorPrototype_Level13_PuffDartSpawner" },
+
         //=======================================
         // Menu
         //=======================================
@@ -222,11 +253,13 @@ std::string EnumToString_ActorPrototype(ActorPrototype actorProto)
     return findIt->second;
 }
 
-ActorPrototype StringToEnum_ActorPrototype(std::string actorProtoStr)
+ActorPrototype StringToEnum_ActorPrototype(const std::string& actorProtoStr)
 {
     static std::map<std::string, ActorPrototype> actorPrototypeStringToEnumMap =
     {
         // Actor enemies
+        { "ActorPrototype_Null", ActorPrototype_Null },
+
         { "ActorPrototype_BaseEnemy", ActorPrototype_BaseEnemy },
 
         { "ActorPrototype_Level1_Soldier", ActorPrototype_Level1_Soldier },
@@ -279,6 +312,8 @@ ActorPrototype StringToEnum_ActorPrototype(std::string actorProtoStr)
         { "ActorPrototype_Level2_TowerCannonRight", ActorPrototype_Level2_TowerCannonRight },
 
         // Projectiles
+        { "ActorPrototype_Level1_RatBomb", ActorPrototype_Level1_RatBomb },
+
         { "ActorPrototype_Level2_CannonBall", ActorPrototype_Level2_CannonBall },
         { "ActorPrototype_Level2_RatProjectile", ActorPrototype_Level2_RatProjectile },
 
@@ -340,6 +375,10 @@ ActorPrototype StringToEnum_ActorPrototype(std::string actorProtoStr)
 
         // Floor Spike
         { "ActorPrototype_BaseFloorSpike", ActorPrototype_BaseFloorSpike },
+        { "ActorPrototype_Level3_FloorSpike", ActorPrototype_Level3_FloorSpike },
+        { "ActorPrototype_Level4_FloorSpike", ActorPrototype_Level4_FloorSpike },
+        { "ActorPrototype_Level12_FloorSpike", ActorPrototype_Level12_FloorSpike },
+        { "ActorPrototype_Level13_FloorSpike", ActorPrototype_Level13_FloorSpike },
 
         // Rope
         { "ActorPrototype_BaseRope", ActorPrototype_BaseRope },
@@ -409,9 +448,8 @@ ActorPrototype StringToEnum_ActorPrototype(std::string actorProtoStr)
         { "ActorPrototype_Level10_MarrowFloor", ActorPrototype_Level10_MarrowFloor },
         { "ActorPrototype_Level10_MarrowParrot", ActorPrototype_Level10_MarrowParrot },
         { "ActorPrototype_Level10_BossGem", ActorPrototype_Level10_BossGem },
-
-
-		// Level 11
+        
+        // Level 11
         { "ActorPrototype_Level11_Mercat", ActorPrototype_Level11_Mercat },
         { "ActorPrototype_Level11_Siren", ActorPrototype_Level11_Siren },
         { "ActorPrototype_Level11_Fish", ActorPrototype_Level11_Fish },
@@ -421,7 +459,30 @@ ActorPrototype StringToEnum_ActorPrototype(std::string actorProtoStr)
         { "ActorPrototype_Level11_Laser", ActorPrototype_Level11_Laser },
         { "ActorPrototype_Level11_SirenProjectile", ActorPrototype_Level11_SirenProjectile },
         { "ActorPrototype_Level11_TridentProjectile", ActorPrototype_Level11_TridentProjectile },
-        
+
+        // Level 12
+        { "ActorPrototype_Level12_Mercat", ActorPrototype_Level12_Mercat },
+        { "ActorPrototype_Level12_CrumblingPeg", ActorPrototype_Level12_CrumblingPeg },
+        { "ActorPrototype_Level12_Siren", ActorPrototype_Level12_Siren },
+        { "ActorPrototype_Level12_Fish", ActorPrototype_Level12_Fish },
+        { "ActorPrototype_Level12_TogglePeg", ActorPrototype_Level12_TogglePeg },
+        { "ActorPrototype_Level12_Aquatis", ActorPrototype_Level12_Aquatis },
+        { "ActorPrototype_Level12_RockSpring", ActorPrototype_Level12_RockSpring },
+        { "ActorPrototype_Level12_PathElevator", ActorPrototype_Level12_PathElevator },
+        { "ActorPrototype_Level12_BossStager", ActorPrototype_Level12_BossStager },
+        { "ActorPrototype_Level12_BossGem", ActorPrototype_Level12_BossGem },
+
+        // Level 13
+        { "ActorPrototype_Level13_BearSailor", ActorPrototype_Level13_BearSailor },
+        { "ActorPrototype_Level13_RedTailPirate", ActorPrototype_Level13_RedTailPirate },
+        { "ActorPrototype_Level13_WaterRock", ActorPrototype_Level13_WaterRock },
+        { "ActorPrototype_Level13_SpringBoard", ActorPrototype_Level13_SpringBoard },
+        { "ActorPrototype_Level13_PathElevator", ActorPrototype_Level13_PathElevator },
+        { "ActorPrototype_Level13_TogglePeg", ActorPrototype_Level13_TogglePeg },
+        { "ActorPrototype_Level13_CrumblingPeg", ActorPrototype_Level13_CrumblingPeg },
+        { "ActorPrototype_Level13_SteppingGround", ActorPrototype_Level13_SteppingGround },
+        { "ActorPrototype_Level13_PuffDartSpawner", ActorPrototype_Level13_PuffDartSpawner },
+
         //=======================================
         // Menu
         //=======================================
@@ -444,7 +505,7 @@ ActorPrototype StringToEnum_ActorPrototype(std::string actorProtoStr)
 // FixtureType
 //=============================================================================
 
-FixtureType FixtureTypeStringToEnum(std::string fixtureTypeStr)
+FixtureType FixtureTypeStringToEnum(const std::string& fixtureTypeStr)
 {
     FixtureType fixtureType = FixtureType_None;
 
@@ -495,7 +556,9 @@ DamageType StringToDamageTypeEnum(const std::string& str)
         { "DamageType_FireSword", DamageType_FireSword },
         { "DamageType_LightningSword", DamageType_LightningSword },
         { "DamageType_FrostSword", DamageType_FrostSword },
-        { "DamageType_GabrielCannonBall", DamageType_GabrielCannonBall }
+        { "DamageType_GabrielCannonBall", DamageType_GabrielCannonBall },
+        { "DamageType_Trident", DamageType_Trident },
+        { "DamageType_SirenProjectile", DamageType_SirenProjectile }
     };
 
     auto findIt = s_StringToDamageTypeEnumMap.find(str);
@@ -512,7 +575,7 @@ DamageType StringToDamageTypeEnum(const std::string& str)
 // b2BodyType
 //=============================================================================
 
-b2BodyType BodyTypeStringToEnum(std::string bodyTypeStr)
+b2BodyType BodyTypeStringToEnum(const std::string& bodyTypeStr)
 {
     b2BodyType bodyType = b2_staticBody;
 
@@ -531,7 +594,7 @@ b2BodyType BodyTypeStringToEnum(std::string bodyTypeStr)
 // Direction
 //=============================================================================
 
-Direction StringToEnum_Direction(std::string dirStr)
+Direction StringToEnum_Direction(const std::string& dirStr)
 {
     static const std::map<std::string, Direction> directionEnumToStringMap =
     {

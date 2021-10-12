@@ -12,10 +12,9 @@
 
 const uint32 g_InvalidGameViewId = 0xFFFFFFFF;
 
-HumanView::HumanView(SDL_Renderer* renderer)
-    :
-    m_bRendering(true),
-    m_bPostponeRenderPresent(false)
+HumanView::HumanView(SDL_Renderer *renderer)
+    : m_bRendering(true),
+      m_bPostponeRenderPresent(false)
 {
     m_pProcessMgr = new ProcessMgr();
 
@@ -33,7 +32,7 @@ HumanView::HumanView(SDL_Renderer* renderer)
         m_pScene->SetCamera(m_pCamera);
 
         //m_pConsole = unique_ptr<Console>(new Console(g_pApp->GetWindowSize().x, g_pApp->GetWindowSize().y / 2,
-            //g_pApp->GetConsoleFont(), renderer, "console02.tga"));
+        //g_pApp->GetConsoleFont(), renderer, "console02.tga"));
 
         m_pConsole = unique_ptr<Console>(new Console(g_pApp->GetConsoleConfig(), renderer, g_pApp->GetWindow()));
     }
@@ -51,11 +50,11 @@ HumanView::~HumanView()
     SAFE_DELETE(m_pProcessMgr);
 }
 
-void HumanView::RegisterConsoleCommandHandler(void(*handler)(const char*, void*), void* userdata)
+void HumanView::RegisterConsoleCommandHandler(void (*handler)(const char *, void *), void *userdata)
 {
     if (m_pConsole)
     {
-        m_pConsole->SetCommandHandler(handler, (void*)m_pConsole.get());
+        m_pConsole->SetCommandHandler(handler, (void *)m_pConsole.get());
     }
 }
 
@@ -74,7 +73,7 @@ void HumanView::VOnRender(uint32 msDiff)
         return;
     }
 
-    SDL_Renderer* renderer = g_pApp->GetRenderer();
+    SDL_Renderer *renderer = g_pApp->GetRenderer();
 
     if (m_RunFullSpeed || true)
     {
@@ -88,7 +87,7 @@ void HumanView::VOnRender(uint32 msDiff)
         // Sort screen elements
         m_ScreenElements.sort(SortBy_SharedPtr_Content<IScreenElement>());
 
-        for (shared_ptr<IScreenElement> screenElement : m_ScreenElements)
+        for (shared_ptr<IScreenElement> &screenElement : m_ScreenElements)
         {
             if (screenElement->VIsVisible())
             {
@@ -114,13 +113,13 @@ void HumanView::VOnUpdate(uint32 msDiff)
 
     m_pConsole->OnUpdate(msDiff);
 
-    for (shared_ptr<IScreenElement> element : m_ScreenElements)
+    for (shared_ptr<IScreenElement> &element : m_ScreenElements)
     {
         element->VOnUpdate(msDiff);
     }
 }
 
-bool HumanView::VOnEvent(SDL_Event& evt)
+bool HumanView::VOnEvent(SDL_Event &evt)
 {
     // First let console try to eat this event
     if (m_pConsole->OnEvent(evt))
@@ -141,38 +140,13 @@ bool HumanView::VOnEvent(SDL_Event& evt)
         }
     }
 
-    
-
     switch (evt.type)
     {
-        case SDL_KEYDOWN:
+    case SDL_KEYDOWN:
+    {
+        if (evt.key.repeat == 0)
         {
-            if (evt.key.repeat == 0)
-            {
-                if (SDL_GetScancodeFromKey(evt.key.keysym.sym) == SDL_SCANCODE_ESCAPE &&
-                    g_pApp->GetGameLogic()->GetGameState() == GameState_IngameRunning &&
-                    m_pIngameMenu &&
-                    !m_pIngameMenu->VIsVisible())
-                {
-                    m_pIngameMenu->VSetVisible(true);
-                    return true;
-                }
-
-                return m_pKeyboardHandler->VOnKeyDown(evt.key.keysym.sym);
-            }
-            break;
-        }
-        case SDL_KEYUP:
-        {
-            if (evt.key.repeat == 0)
-            {
-                return m_pKeyboardHandler->VOnKeyUp(evt.key.keysym.sym);
-            }
-            break;
-        }
-		case SDL_JOYBUTTONDOWN:
-        {
-            if (evt.jbutton.button == 11 &&
+            if (SDL_GetScancodeFromKey(evt.key.keysym.sym) == SDL_SCANCODE_ESCAPE &&
                 g_pApp->GetGameLogic()->GetGameState() == GameState_IngameRunning &&
                 m_pIngameMenu &&
                 !m_pIngameMenu->VIsVisible())
@@ -181,37 +155,69 @@ bool HumanView::VOnEvent(SDL_Event& evt)
                 return true;
             }
 
-            return m_pJoystickHandler->VOnJoystickButtonDown(evt.jbutton.button);
+            return m_pKeyboardHandler->VOnKeyDown(evt.key.keysym.sym);
         }
-        case SDL_JOYBUTTONUP:
+        break;
+    }
+    case SDL_KEYUP:
+    {
+        if (evt.key.repeat == 0)
         {
-            return m_pJoystickHandler->VOnJoystickButtonUp(evt.jbutton.button);
+            return m_pKeyboardHandler->VOnKeyUp(evt.key.keysym.sym);
         }
-        case SDL_JOYAXISMOTION:
+        break;
+    }
+    case SDL_JOYBUTTONDOWN:
+    {
+        if (evt.jbutton.button == 11 &&
+            g_pApp->GetGameLogic()->GetGameState() == GameState_IngameRunning &&
+            m_pIngameMenu &&
+            !m_pIngameMenu->VIsVisible())
         {
-            return m_pJoystickHandler->VOnJoystickAxisMotion(evt.jaxis.axis, evt.jaxis.value);
-        }
-        case SDL_JOYDEVICEREMOVED:
-        case SDL_JOYDEVICEADDED:
-        {
-            g_pApp->HandleJoystickDeviceEvent(evt.jdevice.type, evt.jdevice.which);
-            return false;
+            m_pIngameMenu->VSetVisible(true);
+            return true;
         }
 
-        case SDL_MOUSEMOTION:
+        return m_pJoystickHandler->VOnJoystickButtonDown(evt.jbutton.button);
+    }
+    case SDL_JOYBUTTONUP:
+    {
+        return m_pJoystickHandler->VOnJoystickButtonUp(evt.jbutton.button);
+    }
+    case SDL_JOYAXISMOTION:
+    {
+        return m_pJoystickHandler->VOnJoystickAxisMotion(evt.jaxis.axis, evt.jaxis.value);
+    }
+    case SDL_JOYDEVICEREMOVED:
+    case SDL_JOYDEVICEADDED:
+    {
+        g_pApp->HandleJoystickDeviceEvent(evt.jdevice.type, evt.jdevice.which);
+        return false;
+    }
+    case SDL_UserTouchEvent:
+    {
+        if (m_pTouchHandler)
         {
-            return m_pPointerHandler->VOnPointerMove(evt.motion);
+            const Touch_Event &touchEvent = *((Touch_Event *)evt.user.data1);
+            return m_pTouchHandler->VOnTouch(touchEvent);
         }
-        case SDL_MOUSEBUTTONDOWN:
-        {
-            return m_pPointerHandler->VOnPointerButtonDown(evt.button);
-        }
-        case SDL_MOUSEBUTTONUP:
-        {
-            return m_pPointerHandler->VOnPointerButtonUp(evt.button);
-        }
-        default:
-            return false;
+        break;
+    }
+
+    case SDL_MOUSEMOTION:
+    {
+        return m_pPointerHandler->VOnPointerMove(evt.motion);
+    }
+    case SDL_MOUSEBUTTONDOWN:
+    {
+        return m_pPointerHandler->VOnPointerButtonDown(evt.button);
+    }
+    case SDL_MOUSEBUTTONUP:
+    {
+        return m_pPointerHandler->VOnPointerButtonUp(evt.button);
+    }
+    default:
+        return false;
     }
 
     return false;
@@ -219,10 +225,9 @@ bool HumanView::VOnEvent(SDL_Event& evt)
 
 void HumanView::VOnLostDevice()
 {
-
 }
 
-bool HumanView::EnterMenu(TiXmlElement* pMenuData)
+bool HumanView::EnterMenu(TiXmlElement *pMenuData)
 {
     if (m_pMenu == nullptr)
     {
@@ -240,12 +245,13 @@ bool HumanView::EnterMenu(TiXmlElement* pMenuData)
     return true;
 }
 
-void HumanView::LoadScoreScreen(TiXmlElement* pScoreScreenRootElem)
+void HumanView::LoadScoreScreen(TiXmlElement *pScoreScreenRootElem)
 {
     m_ScreenElements.clear();
     m_pScene.reset();
     m_pHUD.reset();
 
+    m_pCamera->SetParent(nullptr);
     Point defaultCameraPos(0, 0);
     m_pCamera->VSetPosition(defaultCameraPos);
     m_pCamera->SetTarget(nullptr);
@@ -267,13 +273,13 @@ void HumanView::LoadScoreScreen(TiXmlElement* pScoreScreenRootElem)
     }
 }
 
-bool HumanView::LoadGame(TiXmlElement* pLevelXmlElem, LevelData* pLevelData)
+bool HumanView::LoadGame(TiXmlElement *pLevelXmlElem, LevelData *pLevelData)
 {
     m_pScene->SortSceneNodesByZCoord();
 
     // Start playing background music
     m_CurrentLevelMusic = "/LEVEL" + ToStr(pLevelData->GetLevelNumber()) +
-        "/MUSIC/PLAY.XMI";
+                          "/MUSIC/PLAY.XMI";
 
     SoundInfo soundInfo(m_CurrentLevelMusic);
     soundInfo.isMusic = true;
@@ -309,7 +315,7 @@ void HumanView::VSetCameraOffset(int32 offsetX, int32 offsetY)
 
 void HumanView::RegisterAllDelegates()
 {
-    IEventMgr* pEventMgr = IEventMgr::Get();
+    IEventMgr *pEventMgr = IEventMgr::Get();
     pEventMgr->VAddListener(MakeDelegate(this, &HumanView::NewHUDElementDelegate), EventData_New_HUD_Element::sk_EventType);
     pEventMgr->VAddListener(MakeDelegate(this, &HumanView::ScoreUpdatedDelegate), EventData_Updated_Score::sk_EventType);
     pEventMgr->VAddListener(MakeDelegate(this, &HumanView::LivesUpdatedDelegate), EventData_Updated_Lives::sk_EventType);
@@ -321,31 +327,40 @@ void HumanView::RegisterAllDelegates()
     pEventMgr->VAddListener(MakeDelegate(this, &HumanView::RequestPlaySoundDelegate), EventData_Request_Play_Sound::sk_EventType);
     pEventMgr->VAddListener(MakeDelegate(this, &HumanView::RequestResetLevelDelegate), EventData_Request_Reset_Level::sk_EventType);
     IEventMgr::Get()->VAddListener(MakeDelegate(
-        this, &HumanView::LoadGameDelegate), EventData_Menu_LoadGame::sk_EventType);
+                                       this, &HumanView::LoadGameDelegate),
+                                   EventData_Menu_LoadGame::sk_EventType);
     IEventMgr::Get()->VAddListener(MakeDelegate(
-        this, &HumanView::SetVolumeDelegate), EventData_Set_Volume::sk_EventType);
+                                       this, &HumanView::SetVolumeDelegate),
+                                   EventData_Set_Volume::sk_EventType);
     IEventMgr::Get()->VAddListener(MakeDelegate(
-        this, &HumanView::SoundEnabledChangedDelegate), EventData_Sound_Enabled_Changed::sk_EventType);
+                                       this, &HumanView::SoundEnabledChangedDelegate),
+                                   EventData_Sound_Enabled_Changed::sk_EventType);
     IEventMgr::Get()->VAddListener(MakeDelegate(
-        this, &HumanView::ClawDiedDelegate), EventData_Claw_Died::sk_EventType);
+                                       this, &HumanView::ClawDiedDelegate),
+                                   EventData_Claw_Died::sk_EventType);
     IEventMgr::Get()->VAddListener(MakeDelegate(
-        this, &HumanView::TeleportActorDelegate), EventData_Teleport_Actor::sk_EventType);
+                                       this, &HumanView::TeleportActorDelegate),
+                                   EventData_Teleport_Actor::sk_EventType);
     IEventMgr::Get()->VAddListener(MakeDelegate(
-        this, &HumanView::EnterMenuDelegate), EventData_Enter_Menu::sk_EventType);
+                                       this, &HumanView::EnterMenuDelegate),
+                                   EventData_Enter_Menu::sk_EventType);
     IEventMgr::Get()->VAddListener(MakeDelegate(
-        this, &HumanView::FinishedLevelDelegate), EventData_Finished_Level::sk_EventType);
+                                       this, &HumanView::FinishedLevelDelegate),
+                                   EventData_Finished_Level::sk_EventType);
     IEventMgr::Get()->VAddListener(MakeDelegate(
-        this, &HumanView::ActorEnteredBossAreaDelegate), EventData_Entered_Boss_Area::sk_EventType);
+                                       this, &HumanView::ActorEnteredBossAreaDelegate),
+                                   EventData_Entered_Boss_Area::sk_EventType);
     IEventMgr::Get()->VAddListener(MakeDelegate(
-        this, &HumanView::BossFightEndedDelegate), EventData_Boss_Fight_Ended::sk_EventType);
+                                       this, &HumanView::BossFightEndedDelegate),
+                                   EventData_Boss_Fight_Ended::sk_EventType);
     IEventMgr::Get()->VAddListener(MakeDelegate(
-        this, &HumanView::IngameMenuEndGameDelegate), EventData_IngameMenu_End_Game::sk_EventType);
-    
+                                       this, &HumanView::IngameMenuEndGameDelegate),
+                                   EventData_IngameMenu_End_Game::sk_EventType);
 }
 
 void HumanView::RemoveAllDelegates()
 {
-    IEventMgr* pEventMgr = IEventMgr::Get();
+    IEventMgr *pEventMgr = IEventMgr::Get();
     pEventMgr->VRemoveListener(MakeDelegate(this, &HumanView::NewHUDElementDelegate), EventData_New_HUD_Element::sk_EventType);
     pEventMgr->VRemoveListener(MakeDelegate(this, &HumanView::ScoreUpdatedDelegate), EventData_Updated_Score::sk_EventType);
     pEventMgr->VRemoveListener(MakeDelegate(this, &HumanView::LivesUpdatedDelegate), EventData_Updated_Lives::sk_EventType);
@@ -357,25 +372,35 @@ void HumanView::RemoveAllDelegates()
     pEventMgr->VRemoveListener(MakeDelegate(this, &HumanView::RequestPlaySoundDelegate), EventData_Request_Play_Sound::sk_EventType);
     pEventMgr->VRemoveListener(MakeDelegate(this, &HumanView::RequestResetLevelDelegate), EventData_Request_Reset_Level::sk_EventType);
     IEventMgr::Get()->VRemoveListener(MakeDelegate(
-        this, &HumanView::LoadGameDelegate), EventData_Menu_LoadGame::sk_EventType);
+                                          this, &HumanView::LoadGameDelegate),
+                                      EventData_Menu_LoadGame::sk_EventType);
     IEventMgr::Get()->VRemoveListener(MakeDelegate(
-        this, &HumanView::SetVolumeDelegate), EventData_Set_Volume::sk_EventType);
+                                          this, &HumanView::SetVolumeDelegate),
+                                      EventData_Set_Volume::sk_EventType);
     IEventMgr::Get()->VRemoveListener(MakeDelegate(
-        this, &HumanView::SoundEnabledChangedDelegate), EventData_Sound_Enabled_Changed::sk_EventType);
+                                          this, &HumanView::SoundEnabledChangedDelegate),
+                                      EventData_Sound_Enabled_Changed::sk_EventType);
     IEventMgr::Get()->VRemoveListener(MakeDelegate(
-        this, &HumanView::ClawDiedDelegate), EventData_Claw_Died::sk_EventType);
+                                          this, &HumanView::ClawDiedDelegate),
+                                      EventData_Claw_Died::sk_EventType);
     IEventMgr::Get()->VRemoveListener(MakeDelegate(
-        this, &HumanView::TeleportActorDelegate), EventData_Teleport_Actor::sk_EventType);
+                                          this, &HumanView::TeleportActorDelegate),
+                                      EventData_Teleport_Actor::sk_EventType);
     IEventMgr::Get()->VRemoveListener(MakeDelegate(
-        this, &HumanView::EnterMenuDelegate), EventData_Enter_Menu::sk_EventType);
+                                          this, &HumanView::EnterMenuDelegate),
+                                      EventData_Enter_Menu::sk_EventType);
     IEventMgr::Get()->VRemoveListener(MakeDelegate(
-        this, &HumanView::FinishedLevelDelegate), EventData_Finished_Level::sk_EventType);
+                                          this, &HumanView::FinishedLevelDelegate),
+                                      EventData_Finished_Level::sk_EventType);
     IEventMgr::Get()->VRemoveListener(MakeDelegate(
-        this, &HumanView::ActorEnteredBossAreaDelegate), EventData_Entered_Boss_Area::sk_EventType);
+                                          this, &HumanView::ActorEnteredBossAreaDelegate),
+                                      EventData_Entered_Boss_Area::sk_EventType);
     IEventMgr::Get()->VRemoveListener(MakeDelegate(
-        this, &HumanView::BossFightEndedDelegate), EventData_Boss_Fight_Ended::sk_EventType);
+                                          this, &HumanView::BossFightEndedDelegate),
+                                      EventData_Boss_Fight_Ended::sk_EventType);
     IEventMgr::Get()->VRemoveListener(MakeDelegate(
-        this, &HumanView::BossFightEndedDelegate), EventData_Boss_Fight_Ended::sk_EventType);
+                                          this, &HumanView::BossFightEndedDelegate),
+                                      EventData_Boss_Fight_Ended::sk_EventType);
 }
 
 //=====================================================================================================================
@@ -457,10 +482,10 @@ void HumanView::AmmoUpdatedDelegate(IEventDataPtr pEventData)
         if ((pCastEventData->GetAmmoType() == AmmoType_Pistol && m_pHUD->IsElementVisible("pistol")) ||
             (pCastEventData->GetAmmoType() == AmmoType_Magic && m_pHUD->IsElementVisible("magic")) ||
             (pCastEventData->GetAmmoType() == AmmoType_Dynamite && m_pHUD->IsElementVisible("dynamite")))
-        { 
+        {
             m_pHUD->UpdateAmmo(pCastEventData->GetAmmoCount());
         }
-        else
+        else if (pCastEventData->GetAmmoType() <= AmmoType_None || pCastEventData->GetAmmoType() >= AmmoType_Max)
         {
             LOG_ERROR("Unknown ammo type: " + ToStr(pCastEventData->GetAmmoType()));
         }
@@ -486,9 +511,18 @@ void HumanView::AmmoTypeUpdatedDelegate(IEventDataPtr pEventData)
         m_pHUD->SetElementVisible("magic", false);
         m_pHUD->SetElementVisible("dynamite", false);
 
-        if (pCastEventData->GetAmmoType() == AmmoType_Pistol) { m_pHUD->SetElementVisible("pistol", true); }
-        else if (pCastEventData->GetAmmoType() == AmmoType_Magic) { m_pHUD->SetElementVisible("magic", true); }
-        else if (pCastEventData->GetAmmoType() == AmmoType_Dynamite) { m_pHUD->SetElementVisible("dynamite", true); }
+        if (pCastEventData->GetAmmoType() == AmmoType_Pistol)
+        {
+            m_pHUD->SetElementVisible("pistol", true);
+        }
+        else if (pCastEventData->GetAmmoType() == AmmoType_Magic)
+        {
+            m_pHUD->SetElementVisible("magic", true);
+        }
+        else if (pCastEventData->GetAmmoType() == AmmoType_Dynamite)
+        {
+            m_pHUD->SetElementVisible("dynamite", true);
+        }
         else
         {
             LOG_ERROR("Unknown ammo type: " + ToStr(pCastEventData->GetAmmoType()));
@@ -513,7 +547,6 @@ void HumanView::PowerupUpdatedTimeDelegate(IEventDataPtr pEventData)
     }
 }
 
-
 void HumanView::PowerupUpdatedStatusDelegate(IEventDataPtr pEventData)
 {
     shared_ptr<EventData_Updated_Powerup_Status> pCastEventData = static_pointer_cast<EventData_Updated_Powerup_Status>(pEventData);
@@ -537,7 +570,6 @@ void HumanView::PowerupUpdatedStatusDelegate(IEventDataPtr pEventData)
 
             if (pCastEventData->GetPowerupType() == PowerupType_Invisibility)
             {
-
             }
         }
         else if (hadPowerup && !m_pHUD->IsElementVisible("stopwatch"))
@@ -566,15 +598,20 @@ void HumanView::RequestPlaySoundDelegate(IEventDataPtr pEventData)
     shared_ptr<EventData_Request_Play_Sound> pCastEventData = static_pointer_cast<EventData_Request_Play_Sound>(pEventData);
     if (pCastEventData)
     {
-        const SoundInfo* pSoundInfo = pCastEventData->GetSoundInfo();
+        const SoundInfo *pSoundInfo = pCastEventData->GetSoundInfo();
 
-        if ((pSoundInfo->soundToPlay == "") || (pSoundInfo->soundToPlay == "/GAME/SOUNDS/NULL.WAV"))
+        if ((pSoundInfo->soundToPlay.empty()) || (pSoundInfo->soundToPlay == "/GAME/SOUNDS/NULL.WAV"))
         {
             return;
         }
 
         if (pSoundInfo->isMusic) // Background music - instrumental
         {
+#ifdef __EMSCRIPTEN__
+            // TODO: [EMSCRIPTEN] Disable midi sounds for now.
+            // All midi must be converted to MP3 or another web browser compatible formats
+            return;
+#endif
             shared_ptr<MidiFile> pMidiFile = MidiResourceLoader::LoadAndReturnMidiFile(pSoundInfo->soundToPlay.c_str());
             assert(pMidiFile != nullptr);
 
@@ -582,9 +619,6 @@ void HumanView::RequestPlaySoundDelegate(IEventDataPtr pEventData)
         }
         else // Effect / Speech etc. - WAV
         {
-            shared_ptr<Mix_Chunk> pSound = WavResourceLoader::LoadAndReturnSound(pSoundInfo->soundToPlay.c_str());
-            assert(pSound != nullptr);
-
             SoundProperties soundProperties;
             soundProperties.volume = pSoundInfo->soundVolume;
             soundProperties.loops = pSoundInfo->loops;
@@ -604,14 +638,14 @@ void HumanView::RequestPlaySoundDelegate(IEventDataPtr pEventData)
                 int sdlDistance = std::min(distanceRatio * 255, (float)255);
                 LOG("SDL DISTANCE: " + ToStr(sdlDistance));*/
             }
-            
+
+            bool play = true;
             if (!soundSourcePos.IsZeroXY())
             {
                 const float paddingPx = 150.0f;
                 const float paddingRatio = paddingPx / (float)m_pCamera->GetWidth();
                 if (m_pCamera->IntersectsWithPoint(soundSourcePos, 1.0f + paddingRatio))
                 {
-                    bool ok = true;
                     if (pSoundInfo->setDistanceEffect)
                     {
                         Point soundDistanceDelta = m_pCamera->GetCenterPosition() - soundSourcePos;
@@ -632,7 +666,8 @@ void HumanView::RequestPlaySoundDelegate(IEventDataPtr pEventData)
                             angle *= 180 / M_PI;
                             angle -= 180;
 
-                            if (angle < 0) angle = fabs(angle) + 180;
+                            if (angle < 0)
+                                angle = fabs(angle) + 180;
 
                             soundProperties.angle = angle;
                         }
@@ -640,14 +675,17 @@ void HumanView::RequestPlaySoundDelegate(IEventDataPtr pEventData)
 
                     /*LOG("CenterPosition: " + m_pCamera->GetCenterPosition().ToString());
                     LOG("SoundSourcePos: " + soundSourcePos.ToString());*/
-                    if (ok)
-                    {
-                        g_pApp->GetAudio()->PlaySound(pSound.get(), soundProperties);
-                    }
+                }
+                else
+                {
+                    play = false;
                 }
             }
-            else
+
+            if (play)
             {
+                shared_ptr<Mix_Chunk> pSound = WavResourceLoader::LoadAndReturnSound(pSoundInfo->soundToPlay.c_str());
+                assert(pSound != nullptr);
                 g_pApp->GetAudio()->PlaySound(pSound.get(), soundProperties);
             }
         }
@@ -657,7 +695,7 @@ void HumanView::RequestPlaySoundDelegate(IEventDataPtr pEventData)
 void HumanView::RequestResetLevelDelegate(IEventDataPtr pEventData)
 {
     // This event actually has nothing but the information that someone requested level reset
-    shared_ptr<EventData_Request_Reset_Level> pCastEventData = 
+    shared_ptr<EventData_Request_Reset_Level> pCastEventData =
         static_pointer_cast<EventData_Request_Reset_Level>(pEventData);
 
     // Reset Graphical representation of level
@@ -677,7 +715,7 @@ void HumanView::LoadGameDelegate(IEventDataPtr pEventData)
 {
     shared_ptr<EventData_Menu_LoadGame> pCastEventData =
         static_pointer_cast<EventData_Menu_LoadGame>(pEventData);
-    
+
     if (pCastEventData)
     {
         bool isNewGame = pCastEventData->GetIsNewGame();
@@ -689,6 +727,7 @@ void HumanView::LoadGameDelegate(IEventDataPtr pEventData)
         m_pMenu.reset();
         m_pScene.reset(new ScreenElementScene(g_pApp->GetRenderer()));
         m_pHUD.reset(new ScreenElementHUD());
+        m_pScene->AddChild(INVALID_ACTOR_ID, m_pCamera);
         m_pScene->SetCamera(m_pCamera);
 
         // Go to menu after finishing last implemented level
@@ -718,6 +757,7 @@ void HumanView::EnterMenuDelegate(IEventDataPtr pEventData)
     m_pScene.reset(new ScreenElementScene(g_pApp->GetRenderer()));
     m_pHUD.reset();
     m_pIngameMenu.reset();
+    m_pCamera->SetParent(nullptr);
 
     g_pApp->GetAudio()->StopAllSounds();
     //g_pApp->GetGameLogic()->UnloadLevel();
@@ -727,7 +767,6 @@ void HumanView::EnterMenuDelegate(IEventDataPtr pEventData)
 
 void HumanView::FinishedLevelDelegate(IEventDataPtr pEventData)
 {
-    
 }
 
 void HumanView::ActorEnteredBossAreaDelegate(IEventDataPtr pEventData)
@@ -832,11 +871,11 @@ void HumanView::ClawDiedDelegate(IEventDataPtr pEventData)
 
     if (pCastEventData->GetRemainingLives() < 0)
     {
-        TiXmlElement* pXmlGameOverMenuRoot = XmlResourceLoader::LoadAndReturnRootXmlElement("GAME_OVER_MENU.XML");
+        TiXmlElement *pXmlGameOverMenuRoot = XmlResourceLoader::LoadAndReturnRootXmlElement("GAME_OVER_MENU.XML");
         assert(pXmlGameOverMenuRoot != NULL);
 
         shared_ptr<ScreenElementMenu> pGameOverMenu(new ScreenElementMenu(g_pApp->GetRenderer()));
-        assert(pGameOverMenu->Initialize(pXmlGameOverMenuRoot));
+        DO_AND_CHECK(pGameOverMenu->Initialize(pXmlGameOverMenuRoot));
 
         m_ScreenElements.push_back(pGameOverMenu);
         pGameOverMenu->VSetVisible(true);
@@ -874,7 +913,7 @@ void HumanView::IngameMenuEndGameDelegate(IEventDataPtr pEventData)
 }
 
 //=================================================================================================
-// 
+//
 // class SpecialEffectProcess
 //
 //=================================================================================================
@@ -893,28 +932,26 @@ void SpecialEffectProcess::VRestoreStates()
 }
 
 //=================================================================================================
-// 
+//
 // class DeathFadeInOutProcess
 //
 //=================================================================================================
 
 DeathFadeInOutProcess::DeathFadeInOutProcess(Point epicenter, int fadeInDuration, int fadeOutDuration, int startDelay, int endDelay)
-    :
-    SpecialEffectProcess(),
-    m_Epicenter(epicenter),
-    m_FadeInDuration(fadeInDuration),
-    m_FadeOutDuration(fadeOutDuration),
-    m_StartDelay(startDelay),
-    m_EndDelay(endDelay),
-    m_DeathFadeState(DeathFadeState_Started),
-    m_CurrentTime(0)
+    : SpecialEffectProcess(),
+      m_Epicenter(epicenter),
+      m_FadeInDuration(fadeInDuration),
+      m_FadeOutDuration(fadeOutDuration),
+      m_StartDelay(startDelay),
+      m_EndDelay(endDelay),
+      m_DeathFadeState(DeathFadeState_Started),
+      m_CurrentTime(0)
 {
     m_Epicenter.Set(epicenter.x, epicenter.y);
 }
 
 DeathFadeInOutProcess::~DeathFadeInOutProcess()
 {
-
 }
 
 void DeathFadeInOutProcess::VOnInit()
@@ -958,62 +995,62 @@ void DeathFadeInOutProcess::VOnUpdate(uint32 msDiff)
 
     switch (m_DeathFadeState)
     {
-        case DeathFadeState_Started:
+    case DeathFadeState_Started:
+    {
+        if (m_CurrentTime >= m_StartDelay)
         {
-            if (m_CurrentTime >= m_StartDelay)
-            {
-                SoundInfo soundInfo(SOUND_GAME_DEATH_FADE_IN_SOUND);
-                IEventMgr::Get()->VTriggerEvent(IEventDataPtr(
-                    new EventData_Request_Play_Sound(soundInfo)));
+            SoundInfo soundInfo(SOUND_GAME_DEATH_FADE_IN_SOUND);
+            IEventMgr::Get()->VTriggerEvent(IEventDataPtr(
+                new EventData_Request_Play_Sound(soundInfo)));
 
-                m_CurrentTime = 0;
-                m_DeathFadeState = DeathFadeState_FadingIn;
-            }
-            break;
+            m_CurrentTime = 0;
+            m_DeathFadeState = DeathFadeState_FadingIn;
         }
+        break;
+    }
 
-        case DeathFadeState_FadingIn:
+    case DeathFadeState_FadingIn:
+    {
+        if (m_CurrentTime >= m_FadeInDuration)
         {
-            if (m_CurrentTime >= m_FadeInDuration)
-            {
-                SoundInfo soundInfo(SOUND_GAME_DEATH_FADE_OUT_SOUND);
-                IEventMgr::Get()->VTriggerEvent(IEventDataPtr(
-                    new EventData_Request_Play_Sound(soundInfo)));
+            SoundInfo soundInfo(SOUND_GAME_DEATH_FADE_OUT_SOUND);
+            IEventMgr::Get()->VTriggerEvent(IEventDataPtr(
+                new EventData_Request_Play_Sound(soundInfo)));
 
-                g_pApp->GetHumanView()->SetRendering(true);
-                m_CurrentTime = 0;
-                m_DeathFadeState = DeathFadeState_FadingOut;
-            }
-            break;
+            g_pApp->GetHumanView()->SetRendering(true);
+            m_CurrentTime = 0;
+            m_DeathFadeState = DeathFadeState_FadingOut;
         }
+        break;
+    }
 
-        case DeathFadeState_FadingOut:
+    case DeathFadeState_FadingOut:
+    {
+        if (m_CurrentTime >= m_FadeOutDuration)
         {
-            if (m_CurrentTime >= m_FadeOutDuration)
-            {
-                m_CurrentTime = 0;
-                m_DeathFadeState = DeathFadeState_Ended;
-            }
-            break;
+            m_CurrentTime = 0;
+            m_DeathFadeState = DeathFadeState_Ended;
         }
+        break;
+    }
 
-        case DeathFadeState_Ended:
+    case DeathFadeState_Ended:
+    {
+        if (m_CurrentTime >= m_EndDelay)
         {
-            if (m_CurrentTime >= m_EndDelay)
-            {
-                Succeed();
+            Succeed();
 
-                // This should not be here, since it does not know that Claw died here...
-                StrongActorPtr pClaw = g_pApp->GetGameLogic()->GetClawActor();
-                assert(pClaw != nullptr);
+            // This should not be here, since it does not know that Claw died here...
+            StrongActorPtr pClaw = g_pApp->GetGameLogic()->GetClawActor();
+            assert(pClaw != nullptr);
 
-                IEventMgr::Get()->VQueueEvent(IEventDataPtr(new EventData_Claw_Respawned(pClaw->GetGUID())));
-            }
-            break;
+            IEventMgr::Get()->VQueueEvent(IEventDataPtr(new EventData_Claw_Respawned(pClaw->GetGUID())));
         }
-        default:
-            LOG_ERROR("Unknown DeathFadeState: " + ToStr((int)m_DeathFadeState));
-            break;
+        break;
+    }
+    default:
+        LOG_ERROR("Unknown DeathFadeState: " + ToStr((int)m_DeathFadeState));
+        break;
     }
 
     //LOG("State: " + ToStr((int)m_DeathFadeState));
@@ -1023,16 +1060,17 @@ void DeathFadeInOutProcess::VOnUpdate(uint32 msDiff)
 
 void DeathFadeInOutProcess::VRender(uint32 msDiff)
 {
-    SDL_Renderer* pRenderer = g_pApp->GetRenderer();
+    SDL_Renderer *pRenderer = g_pApp->GetRenderer();
 
     Point windowSize = g_pApp->GetWindowSizeScaled();
-    
+
     /*g_pApp->GetHumanView()->SetRendering(true);
     g_pApp->GetHumanView()->VOnRender(msDiff);
     g_pApp->GetHumanView()->SetRendering(false);*/
 
     // Render fade in/outs according to current state
     int referenceTime = 0;
+    Point *fadeSpeed = &m_FadeInSpeed;
     if (m_DeathFadeState == DeathFadeState_FadingIn)
     {
         referenceTime = m_CurrentTime;
@@ -1040,29 +1078,30 @@ void DeathFadeInOutProcess::VRender(uint32 msDiff)
     else if (m_DeathFadeState == DeathFadeState_FadingOut)
     {
         referenceTime = m_FadeOutDuration - m_CurrentTime;
+        fadeSpeed = &m_FadeOutSpeed;
     }
 
     // Left -> right rect
-    int currentWidth = (int)((double)referenceTime * m_FadeInSpeed.x);
+    int currentWidth = (int)((double)referenceTime * fadeSpeed->x);
     //LOG("Current width: " + ToStr(currentWidth));
-    SDL_Rect leftRect = { 0, 0, currentWidth, (int)windowSize.y };
-    SDL_Texture* pLeftRectTexture = Util::CreateSDLTextureRect(leftRect.w, leftRect.h, COLOR_BLACK, pRenderer);
+    SDL_Rect leftRect = {0, 0, currentWidth, (int)windowSize.y};
+    SDL_Texture *pLeftRectTexture = Util::CreateSDLTextureRect(leftRect.w, leftRect.h, COLOR_BLACK, pRenderer);
     SDL_RenderCopy(pRenderer, pLeftRectTexture, NULL, &leftRect);
 
     // Right -> left rect
-    SDL_Rect rightRect = { (int)windowSize.x - currentWidth , 0, currentWidth, (int)windowSize.y };
-    SDL_Texture* pRightRectTexture = Util::CreateSDLTextureRect(rightRect.w, rightRect.h, COLOR_BLACK, pRenderer);
+    SDL_Rect rightRect = {(int)windowSize.x - currentWidth, 0, currentWidth, (int)windowSize.y};
+    SDL_Texture *pRightRectTexture = Util::CreateSDLTextureRect(rightRect.w, rightRect.h, COLOR_BLACK, pRenderer);
     SDL_RenderCopy(pRenderer, pRightRectTexture, NULL, &rightRect);
 
-    int currentHeight = (int)((double)referenceTime * m_FadeInSpeed.y);
+    int currentHeight = (int)((double)referenceTime * fadeSpeed->y);
     // Top -> Down
-    SDL_Rect topRect = { 0, 0, (int)windowSize.x, currentHeight };
-    SDL_Texture* pTopTexture = Util::CreateSDLTextureRect(topRect.w, topRect.h, COLOR_BLACK, pRenderer);
+    SDL_Rect topRect = {0, 0, (int)windowSize.x, currentHeight};
+    SDL_Texture *pTopTexture = Util::CreateSDLTextureRect(topRect.w, topRect.h, COLOR_BLACK, pRenderer);
     SDL_RenderCopy(pRenderer, pTopTexture, NULL, &topRect);
 
     // Down -> Top
-    SDL_Rect bottomRect = { 0, (int)windowSize.y - currentHeight, (int)windowSize.x, currentHeight };
-    SDL_Texture* pBottomTexture = Util::CreateSDLTextureRect(bottomRect.w, bottomRect.h, COLOR_BLACK, pRenderer);
+    SDL_Rect bottomRect = {0, (int)windowSize.y - currentHeight, (int)windowSize.x, currentHeight};
+    SDL_Texture *pBottomTexture = Util::CreateSDLTextureRect(bottomRect.w, bottomRect.h, COLOR_BLACK, pRenderer);
     SDL_RenderCopy(pRenderer, pBottomTexture, NULL, &bottomRect);
 
     SDL_DestroyTexture(pLeftRectTexture);
@@ -1070,27 +1109,26 @@ void DeathFadeInOutProcess::VRender(uint32 msDiff)
     SDL_DestroyTexture(pTopTexture);
     SDL_DestroyTexture(pBottomTexture);
 
-    SDL_RenderPresent(pRenderer);
+    Util::RenderForcePresent(pRenderer);
 }
 
 //=================================================================================================
-// 
+//
 // class FadingLine - helper that represents line on the screen that is fading in or out
 //
 //=================================================================================================
 
 FadingLine::FadingLine(int length, Point fragmentSize, int fadeDelay, int fadeDuration, bool isFadingIn)
-    :
-    m_Length(length),
-    m_FragmentSize(fragmentSize),
-    m_FadeDelay(fadeDelay),
-    m_FadeDuration(fadeDuration),
-    m_bIsFadingIn(isFadingIn),
-    m_CurrentTime(0),
-    m_SingleFragmentFadeTime(0),
-    m_bIsActive(false),
-    m_bIsDone(false),
-    m_FragmentCount(0)
+    : m_Length(length),
+      m_FragmentSize(fragmentSize),
+      m_FadeDelay(fadeDelay),
+      m_FadeDuration(fadeDuration),
+      m_bIsFadingIn(isFadingIn),
+      m_CurrentTime(0),
+      m_SingleFragmentFadeTime(0),
+      m_bIsActive(false),
+      m_bIsDone(false),
+      m_FragmentCount(0)
 {
     m_FragmentCount = (length / (int)fragmentSize.x) + 1;
     m_SingleFragmentFadeTime = fadeDuration / m_FragmentCount;
@@ -1101,14 +1139,13 @@ FadingLine::FadingLine(int length, Point fragmentSize, int fadeDelay, int fadeDu
         m_FadedFragments.push_back(!m_bIsFadingIn);
     }
 
-    LOG("length: " + ToStr(m_Length) + ", fadeDelay: " + ToStr(m_FadeDelay) + 
-        ", fadeDuration: " + ToStr(m_FadeDuration) + ", fragmentCount: " + ToStr(m_FragmentCount) + 
+    LOG("length: " + ToStr(m_Length) + ", fadeDelay: " + ToStr(m_FadeDelay) +
+        ", fadeDuration: " + ToStr(m_FadeDuration) + ", fragmentCount: " + ToStr(m_FragmentCount) +
         ", isFadingIn: " + ToStr(m_bIsFadingIn));
 }
 
 FadingLine::~FadingLine()
 {
-
 }
 
 void FadingLine::Update(uint32 msDiff)
@@ -1166,7 +1203,7 @@ void FadingLine::Reset(int fadeDelay, bool isFadingIn)
     m_pPrimeSearch.reset(new PrimeSearch(m_FragmentCount));
 }
 
-void FadingLine::Render(SDL_Renderer* pRenderer, SDL_Texture* pFragmentTexture, Point& lineOffset, bool asRow)
+void FadingLine::Render(SDL_Renderer *pRenderer, SDL_Texture *pFragmentTexture, Point &lineOffset, bool asRow)
 {
     assert(pRenderer != NULL);
     assert(pFragmentTexture != NULL);
@@ -1206,24 +1243,22 @@ void FadingLine::Render(SDL_Renderer* pRenderer, SDL_Texture* pFragmentTexture, 
 }
 
 //=================================================================================================
-// 
+//
 // class TeleportFadeInOutProcess
 //
 //=================================================================================================
 
 TeleportFadeInOutProcess::TeleportFadeInOutProcess(int fadeInDuration, int fadeOutDuration)
-    :
-    SpecialEffectProcess(),
-    m_FadeInDuration(fadeInDuration),
-    m_FadeOutDuration(fadeOutDuration),
-    m_TeleportState(TeleportState_FadingIn),
-    m_CurrentTime(0)
+    : SpecialEffectProcess(),
+      m_FadeInDuration(fadeInDuration),
+      m_FadeOutDuration(fadeOutDuration),
+      m_TeleportState(TeleportState_FadingIn),
+      m_CurrentTime(0)
 {
 }
 
 TeleportFadeInOutProcess::~TeleportFadeInOutProcess()
 {
-
 }
 
 void TeleportFadeInOutProcess::VOnInit()
@@ -1277,37 +1312,37 @@ void TeleportFadeInOutProcess::VOnUpdate(uint32 msDiff)
 
     switch (m_TeleportState)
     {
-        case TeleportState_FadingIn:
-            /*for (shared_ptr<FadingLine> pLine : m_Lines)
+    case TeleportState_FadingIn:
+        /*for (shared_ptr<FadingLine> pLine : m_Lines)
             {
                 pLine->Update(msDiff);
             }*/
 
-            if (m_CurrentTime >= m_FadeInDuration)
-            {
-                m_CurrentTime = 0;
-                m_TeleportState = TeleportState_FadingOut;
-                g_pApp->GetHumanView()->SetRendering(true);
+        if (m_CurrentTime >= m_FadeInDuration)
+        {
+            m_CurrentTime = 0;
+            m_TeleportState = TeleportState_FadingOut;
+            g_pApp->GetHumanView()->SetRendering(true);
 
-                /*for (shared_ptr<FadingLine> pLine : m_Lines)
+            /*for (shared_ptr<FadingLine> pLine : m_Lines)
                 {
                     pLine->Reset(false);
                 }*/
 
-                //Succeed();
-            }
-            break;
+            //Succeed();
+        }
+        break;
 
-        case TeleportState_FadingOut:
-            if (m_CurrentTime >= m_FadeOutDuration)
-            {
-                Succeed();
-            }
-            break;
+    case TeleportState_FadingOut:
+        if (m_CurrentTime >= m_FadeOutDuration)
+        {
+            Succeed();
+        }
+        break;
 
-        default:
-            LOG_ERROR("Unknown TeleportState: " + ToStr((int)m_TeleportState));
-            break;
+    default:
+        LOG_ERROR("Unknown TeleportState: " + ToStr((int)m_TeleportState));
+        break;
     }
 
     VRender(msDiff);
@@ -1315,12 +1350,13 @@ void TeleportFadeInOutProcess::VOnUpdate(uint32 msDiff)
 
 void TeleportFadeInOutProcess::VRender(uint32 msDiff)
 {
-    SDL_Renderer* pRenderer = g_pApp->GetRenderer();
+    SDL_Renderer *pRenderer = g_pApp->GetRenderer();
 
     Point windowSize = g_pApp->GetWindowSizeScaled();
 
     // Render fade in/outs according to current state
     int referenceTime = 0;
+    Point *fadeSpeed = &m_FadeInSpeed;
     if (m_TeleportState == TeleportState_FadingIn)
     {
         referenceTime = m_CurrentTime;
@@ -1328,24 +1364,25 @@ void TeleportFadeInOutProcess::VRender(uint32 msDiff)
     else if (m_TeleportState == TeleportState_FadingOut)
     {
         referenceTime = m_FadeOutDuration - m_CurrentTime;
+        fadeSpeed = &m_FadeOutSpeed;
     }
 
     referenceTime = max(0, referenceTime);
 
     // Left -> right rect
-    int currentWidth = (int)((double)referenceTime * m_FadeInSpeed.x);
+    int currentWidth = (int)((double)referenceTime * fadeSpeed->x);
     //LOG("Current width: " + ToStr(currentWidth));
-    SDL_Rect leftRect = { 0, 0, currentWidth, (int)windowSize.y };
-    SDL_Texture* pLeftRectTexture = Util::CreateSDLTextureRect(leftRect.w, leftRect.h, COLOR_BLACK, pRenderer);
+    SDL_Rect leftRect = {0, 0, currentWidth, (int)windowSize.y};
+    SDL_Texture *pLeftRectTexture = Util::CreateSDLTextureRect(leftRect.w, leftRect.h, COLOR_BLACK, pRenderer);
     SDL_RenderCopy(pRenderer, pLeftRectTexture, NULL, &leftRect);
 
     // Right -> left rect
-    SDL_Rect rightRect = { (int)windowSize.x - currentWidth, 0, currentWidth, (int)windowSize.y };
-    SDL_Texture* pRightRectTexture = Util::CreateSDLTextureRect(rightRect.w, rightRect.h, COLOR_BLACK, pRenderer);
+    SDL_Rect rightRect = {(int)windowSize.x - currentWidth, 0, currentWidth, (int)windowSize.y};
+    SDL_Texture *pRightRectTexture = Util::CreateSDLTextureRect(rightRect.w, rightRect.h, COLOR_BLACK, pRenderer);
     SDL_RenderCopy(pRenderer, pRightRectTexture, NULL, &rightRect);
 
     SDL_DestroyTexture(pLeftRectTexture);
     SDL_DestroyTexture(pRightRectTexture);
 
-    SDL_RenderPresent(pRenderer);
+    Util::RenderForcePresent(pRenderer);
 }

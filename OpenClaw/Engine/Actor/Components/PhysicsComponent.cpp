@@ -189,8 +189,7 @@ bool PhysicsComponent::VInit(TiXmlElement* data)
 
 void PhysicsComponent::VPostInit()
 {
-    shared_ptr<PositionComponent> pPositionComponent =
-        MakeStrongPtr(m_pOwner->GetComponent<PositionComponent>(PositionComponent::g_Name));
+    shared_ptr<PositionComponent> pPositionComponent = m_pOwner->GetPositionComponent();
     assert(pPositionComponent);
 
     if (m_ActorBodyDef.collisionFlag != CollisionFlag_None)
@@ -223,10 +222,10 @@ void PhysicsComponent::VPostInit()
             }
 
             // HACK:
-            if (m_pOwner->GetName() == "/LEVEL1/IMAGES/RATBOMB/*")
-            {
-                pImage->SetOffset(0, 0);
-            }
+//            if (m_pOwner->GetName() == "/LEVEL1/IMAGES/RATBOMB/*")
+//            {
+//                pImage->SetOffset(0, 0);
+//            }
         }
 
         m_ActorBodyDef.position += m_ActorBodyDef.positionOffset;
@@ -259,7 +258,10 @@ void PhysicsComponent::VPostPostInit()
         double deltaY = raycastDown.deltaY - m_pPhysics->VGetAABB(m_pOwner->GetGUID(), true).h / 2;
 
         pPositionComponent->SetY(pPositionComponent->GetY() + deltaY - 1);
-        m_pPhysics->VSetPosition(m_pOwner->GetGUID(), pPositionComponent->GetPosition());
+        const Point newPos = pPositionComponent->GetPosition();
+        m_pPhysics->VSetPosition(m_pOwner->GetGUID(), newPos);
+        IEventMgr::Get()->VTriggerEvent(IEventDataPtr(
+                new EventData_Move_Actor(m_pOwner->GetGUID(), newPos)));
     }
 }
 
@@ -302,6 +304,16 @@ void PhysicsComponent::VUpdate(uint32 msDiff)
     LOG("CLIMBING Y: " + ToStr(m_ClimbingSpeed.y));*/
     
     //LOG("ROPE_1: " + ToStr(m_pControllableComponent->VIsAttachedToRope()));
+
+
+    if (!m_pControllableComponent->CanMove() && m_pControllableComponent->IsActorFrozen())
+    {
+        m_pControllableComponent->AddFrozenTime(msDiff);
+    }
+    else
+    {
+        m_pControllableComponent->SetFrozenTime(0);
+    }
 
     m_DoNothingTimeout -= msDiff;
     if (m_DoNothingTimeout > 0)
@@ -987,8 +999,7 @@ bool PhysicsComponent::AttachToLadder()
         }
     }
 
-    shared_ptr<PositionComponent> pPositionComponent =
-        MakeStrongPtr(m_pOwner->GetComponent<PositionComponent>(PositionComponent::g_Name));
+    shared_ptr<PositionComponent> pPositionComponent = m_pOwner->GetPositionComponent();
     assert(pPositionComponent);
 
     Point actorPosition = pPositionComponent->GetPosition();

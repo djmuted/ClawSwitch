@@ -11,7 +11,7 @@ const char* AnimationComponent::g_Name = "AnimationComponent";
 
 AnimationComponent::AnimationComponent()
     :
-    _currentAnimation(NULL),
+    _currentAnimation(nullptr),
     m_PauseOnStart(false),
     m_PauseOnEnd(false)
 { }
@@ -23,11 +23,11 @@ AnimationComponent::~AnimationComponent()
 
 bool AnimationComponent::VInit(TiXmlElement* data)
 {
-    assert(data != NULL);
+    assert(data != nullptr);
 
     // Loop through all anim paths elements
     for (TiXmlElement* animPathElem = data->FirstChildElement("AnimationPath");
-        animPathElem != NULL; 
+        animPathElem != nullptr; 
         animPathElem = animPathElem->NextSiblingElement("AnimationPath"))
     {
         const char* animationsPath = animPathElem->GetText();
@@ -48,8 +48,8 @@ bool AnimationComponent::VInit(TiXmlElement* data)
                 LOG_WARNING("Trying to load existing animation: " + animPath);
                 continue;
             }
-            
-            Animation* animation = Animation::CreateAnimation(wapAni, animNameKey.c_str(), animPath.c_str(), this);
+
+            std::shared_ptr<Animation> animation = Animation::CreateAnimation(wapAni, animNameKey.c_str(), animPath.c_str(), this);
             if (!animation)
             {
                 LOG_ERROR("Could not create animation: " + animPath);
@@ -61,7 +61,7 @@ bool AnimationComponent::VInit(TiXmlElement* data)
     }
 
     for (TiXmlElement* animElem = data->FirstChildElement("Animation");
-        animElem != NULL; 
+        animElem != nullptr; 
         animElem = animElem->NextSiblingElement("Animation"))
     {
         if (!animElem->Attribute("type"))
@@ -76,14 +76,14 @@ bool AnimationComponent::VInit(TiXmlElement* data)
     }
 
     for (TiXmlElement* pSpecialAnimElem = data->FirstChildElement("SpecialAnimation");
-        pSpecialAnimElem != NULL;
+        pSpecialAnimElem != nullptr;
         pSpecialAnimElem = pSpecialAnimElem->NextSiblingElement("SpecialAnimation"))
     {
         SpecialAnimation specialAnim;
 
-        assert(ParseValueFromXmlElem(&specialAnim.type, pSpecialAnimElem->FirstChildElement("Type")));
-        assert(ParseValueFromXmlElem(&specialAnim.frameDuration, pSpecialAnimElem->FirstChildElement("FrameDuration")));
-        assert(ParseValueFromXmlElem(&specialAnim.setPositionDelay, pSpecialAnimElem->FirstChildElement("HasPositionDelay")));
+        DO_AND_CHECK(ParseValueFromXmlElem(&specialAnim.type, pSpecialAnimElem->FirstChildElement("Type")));
+        DO_AND_CHECK(ParseValueFromXmlElem(&specialAnim.frameDuration, pSpecialAnimElem->FirstChildElement("FrameDuration")));
+        DO_AND_CHECK(ParseValueFromXmlElem(&specialAnim.setPositionDelay, pSpecialAnimElem->FirstChildElement("HasPositionDelay")));
 
         m_SpecialAnimationList.push_back(specialAnim);
     }
@@ -101,25 +101,26 @@ bool AnimationComponent::VInit(TiXmlElement* data)
 
 void AnimationComponent::VPostInit()
 {
+    shared_ptr<ActorRenderComponent> pRenderComponent = MakeStrongPtr(m_pOwner->GetComponent<ActorRenderComponent>());
+    if (!pRenderComponent)
+    {
+        pRenderComponent = MakeStrongPtr(m_pOwner->GetComponent<HUDRenderComponent>());
+    }
+    if (!pRenderComponent)
+    {
+        LOG_ERROR("Actor has existing animation component but not render component. Actor: " + m_pOwner->GetName());
+        assert(false && "Actor has to have render component");
+    }
+    m_pActorRenderComponent = pRenderComponent;
+
     // TODO: Get rid of this. Obfuscated, unmaintanable...
-    for (std::string animType : m_SpecialAnimationRequestList)
+    for (const std::string& animType : m_SpecialAnimationRequestList)
     {
         if (animType.find("cycle") != std::string::npos)
         {
             std::string cycleDurationStr = animType;
             cycleDurationStr.erase(0, 5);
             int cycleDuration = std::stoi(cycleDurationStr);
-
-            shared_ptr<ActorRenderComponent> pRenderComponent = MakeStrongPtr(m_pOwner->GetComponent<ActorRenderComponent>(ActorRenderComponent::g_Name));
-            if (!pRenderComponent)
-            {
-                pRenderComponent = MakeStrongPtr(m_pOwner->GetComponent<HUDRenderComponent>(HUDRenderComponent::g_Name));
-            }
-            if (!pRenderComponent)
-            {
-                LOG_ERROR("Actor has existing animation component but not render component. Actor: " + m_pOwner->GetName());
-                continue;
-            }
 
             // If there is only 1 or 0 frames, we do not need to animate it
             if (pRenderComponent->GetImagesCount() <= 1)
@@ -128,7 +129,7 @@ void AnimationComponent::VPostInit()
                 continue;
             }
 
-            Animation* pCycleAnim = Animation::CreateAnimation(pRenderComponent->GetImagesCount(), cycleDuration, animType.c_str(), this);
+            std::shared_ptr<Animation> pCycleAnim = Animation::CreateAnimation(pRenderComponent->GetImagesCount(), cycleDuration, animType.c_str(), this);
             if (!pCycleAnim)
             {
                 LOG_ERROR("Failed to create " + animType + " animation.");
@@ -136,8 +137,7 @@ void AnimationComponent::VPostInit()
             }
 
             // Set delay according to X coord
-            shared_ptr<PositionComponent> pPositionComponent =
-                MakeStrongPtr(m_pOwner->GetComponent<PositionComponent>(PositionComponent::g_Name));
+            shared_ptr<PositionComponent> pPositionComponent = m_pOwner->GetPositionComponent();
             if (!pPositionComponent)
             {
                 LOG_ERROR("Actor is missing position component. Actor: " + m_pOwner->GetName());
@@ -167,17 +167,6 @@ void AnimationComponent::VPostInit()
 
         if (specialAnim.type == "cycle")
         {
-            shared_ptr<ActorRenderComponent> pRenderComponent = MakeStrongPtr(m_pOwner->GetComponent<ActorRenderComponent>(ActorRenderComponent::g_Name));
-            if (!pRenderComponent)
-            {
-                pRenderComponent = MakeStrongPtr(m_pOwner->GetComponent<HUDRenderComponent>(HUDRenderComponent::g_Name));
-            }
-            if (!pRenderComponent)
-            {
-                LOG_ERROR("Actor has existing animation component but not render component. Actor: " + m_pOwner->GetName());
-                assert(false);
-                continue;
-            }
 
             // If there is only 1 or 0 frames, we do not need to animate it
             if (pRenderComponent->GetImagesCount() <= 1)
@@ -186,7 +175,7 @@ void AnimationComponent::VPostInit()
                 continue;
             }
 
-            Animation* pCycleAnim = Animation::CreateAnimation(
+            std::shared_ptr<Animation> pCycleAnim = Animation::CreateAnimation(
                 pRenderComponent->GetImagesCount(), 
                 specialAnim.frameDuration, 
                 specialAnim.type.c_str(), 
@@ -200,8 +189,7 @@ void AnimationComponent::VPostInit()
             if (specialAnim.setPositionDelay)
             {
                 // Set delay according to X coord
-                shared_ptr<PositionComponent> pPositionComponent =
-                    MakeStrongPtr(m_pOwner->GetComponent<PositionComponent>(PositionComponent::g_Name));
+                shared_ptr<PositionComponent> pPositionComponent = m_pOwner->GetPositionComponent();
                 if (!pPositionComponent)
                 {
                     LOG_ERROR("Actor is missing position component. Actor: " + m_pOwner->GetName());
@@ -250,7 +238,7 @@ void AnimationComponent::VUpdate(uint32 msDiff)
     }
 }
 
-bool AnimationComponent::SetAnimation(std::string animationName)
+bool AnimationComponent::SetAnimation(const std::string& animationName)
 {
     if (animationName == _currentAnimation->GetName())
     {
@@ -268,8 +256,8 @@ bool AnimationComponent::SetAnimation(std::string animationName)
 
     //LOG("Setting anim: " + animationName);
 
-    Animation* pOldAnimation = _currentAnimation;
-    Animation* pNewAnimation = findIt->second;
+    std::shared_ptr<Animation> pOldAnimation = _currentAnimation;
+    std::shared_ptr<Animation> pNewAnimation = findIt->second;
 
     pNewAnimation->Reset();
     _currentAnimation = pNewAnimation;
@@ -285,7 +273,7 @@ bool AnimationComponent::SetAnimation(std::string animationName)
 
     if (pOldAnimation && pNewAnimation)
     {
-        NotifyAnimationChanged(pOldAnimation, pNewAnimation);
+        NotifyAnimationChanged(pOldAnimation.get(), pNewAnimation.get());
     }
 
     return true;
@@ -299,13 +287,13 @@ bool AnimationComponent::HasAnimation(std::string& animName)
 void AnimationComponent::PauseAnimation()
 {
     _currentAnimation->Pause();
-    NotifyAnimationPaused(_currentAnimation);
+    NotifyAnimationPaused(_currentAnimation.get());
 }
 
 void AnimationComponent::ResumeAnimation()
 {
     _currentAnimation->Resume();
-    NotifyAnimationResumed(_currentAnimation);
+    NotifyAnimationResumed(_currentAnimation.get());
 }
 
 void AnimationComponent::ResetAnimation()
@@ -319,27 +307,22 @@ void AnimationComponent::ResetAnimation()
 
 void AnimationComponent::OnAnimationFrameFinished(AnimationFrame* frame)
 {
-    if (!frame->eventName.empty())
-    {
+    //if (!frame->eventName.empty())
+    //{
         // Raise event
-    }
+    //}
 }
 
 void AnimationComponent::OnAnimationFrameStarted(AnimationFrame* frame)
 {
-    if (!frame->eventName.empty())
-    {
+    //if (!frame->eventName.empty())
+    //{
         // Raise event
-    }
+    //}
 
     // Notify render component to change frame image
-    shared_ptr<ActorRenderComponent> renderComponent =
-        MakeStrongPtr(m_pOwner->GetComponent<ActorRenderComponent>());
+    shared_ptr<ActorRenderComponent> renderComponent = MakeStrongPtr(m_pActorRenderComponent);
     if (renderComponent)
-    {
-        renderComponent->SetImage(frame->imageName);
-    }
-    else if ((renderComponent = MakeStrongPtr(m_pOwner->GetComponent<HUDRenderComponent>())))
     {
         renderComponent->SetImage(frame->imageName);
     }
@@ -356,17 +339,17 @@ void AnimationComponent::OnAnimationFinished()
 
 void AnimationComponent::OnAnimationFrameChanged(AnimationFrame* pLastFrame, AnimationFrame* pNewFrame)
 {
-    NotifyAnimationFrameChanged(_currentAnimation, pLastFrame, pNewFrame);
+    NotifyAnimationFrameChanged(_currentAnimation.get(), pLastFrame, pNewFrame);
 }
 
 void AnimationComponent::OnAnimationLooped()
 {
-    NotifyAnimationLooped(_currentAnimation);
+    NotifyAnimationLooped(_currentAnimation.get());
 }
 
 void AnimationComponent::OnAnimationAtLastFrame()
 {
-    NotifyAnimationAtLastFrame(_currentAnimation);
+    NotifyAnimationAtLastFrame(_currentAnimation.get());
 
     if (m_PauseOnEnd)
     {
@@ -384,7 +367,7 @@ void AnimationComponent::SetReverseAnimation(bool reverse)
     _currentAnimation->SetReverseAnim(reverse);
 }
 
-bool AnimationComponent::AddAnimation(std::string animName, Animation* pAnim)
+bool AnimationComponent::AddAnimation(const std::string &animName, std::shared_ptr<Animation> &pAnim)
 {
     if (_animationMap.find(animName) != _animationMap.end())
     {
@@ -400,11 +383,19 @@ bool AnimationComponent::AddAnimation(std::string animName, Animation* pAnim)
 // AnimationSubject implementation
 //=====================================================================================================================
 
+AnimationSubject::~AnimationSubject()
+{
+    m_AnimationObservers.clear();
+}
+
 void AnimationSubject::NotifyAnimationLooped(Animation* pAnimation)
 {
     for (AnimationObserver* pSubject : m_AnimationObservers)
     {
-        pSubject->VOnAnimationLooped(pAnimation);
+        if (pSubject)
+        {
+            pSubject->VOnAnimationLooped(pAnimation);
+        }
     }
 }
 
@@ -412,7 +403,10 @@ void AnimationSubject::NotifyAnimationStarted(Animation* pAnimation)
 {
     for (AnimationObserver* pSubject : m_AnimationObservers)
     {
-        pSubject->VOnAnimationStarted(pAnimation);
+        if (pSubject)
+        {
+            pSubject->VOnAnimationStarted(pAnimation);
+        }
     }
 }
 
@@ -420,7 +414,10 @@ void AnimationSubject::NotifyAnimationFrameChanged(Animation* pAnimation, Animat
 {
     for (AnimationObserver* pSubject : m_AnimationObservers)
     {
-        pSubject->VOnAnimationFrameChanged(pAnimation, pLastFrame, pNewFrame);
+        if (pSubject)
+        {
+            pSubject->VOnAnimationFrameChanged(pAnimation, pLastFrame, pNewFrame);
+        }
     }
 }
 
@@ -428,7 +425,10 @@ void AnimationSubject::NotifyAnimationPaused(Animation* pAnimation)
 {
     for (AnimationObserver* pSubject : m_AnimationObservers)
     {
-        pSubject->VOnAnimationPaused(pAnimation);
+        if (pSubject)
+        {
+            pSubject->VOnAnimationPaused(pAnimation);
+        }
     }
 }
 
@@ -436,7 +436,10 @@ void AnimationSubject::NotifyAnimationResumed(Animation* pAnimation)
 {
     for (AnimationObserver* pSubject : m_AnimationObservers)
     {
-        pSubject->VOnAnimationResumed(pAnimation);
+        if (pSubject)
+        {
+            pSubject->VOnAnimationResumed(pAnimation);
+        }
     }
 }
 
@@ -444,7 +447,10 @@ void AnimationSubject::NotifyAnimationAtLastFrame(Animation* pAnimation)
 {
     for (AnimationObserver* pSubject : m_AnimationObservers)
     {
-        pSubject->VOnAnimationAtLastFrame(pAnimation);
+        if (pSubject)
+        {
+            pSubject->VOnAnimationAtLastFrame(pAnimation);
+        }
     }
 }
 
@@ -452,7 +458,10 @@ void AnimationSubject::NotifyAnimationChanged(Animation* pOldAnimation, Animatio
 {
     for (AnimationObserver* pSubject : m_AnimationObservers)
     {
-        pSubject->VOnAnimationChanged(pOldAnimation, pNewAnimation);
+        if (pSubject)
+        {
+            pSubject->VOnAnimationChanged(pOldAnimation, pNewAnimation);
+        }
     }
 }
 
@@ -460,7 +469,10 @@ void AnimationSubject::NotifyAnimationEndedDelay(Animation* pOldAnimation)
 {
     for (AnimationObserver* pSubject : m_AnimationObservers)
     {
-        pSubject->VOnAnimationEndedDelay(pOldAnimation);
+        if (pSubject)
+        {
+            pSubject->VOnAnimationEndedDelay(pOldAnimation);
+        }
     }
 }
 

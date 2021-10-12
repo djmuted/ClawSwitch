@@ -34,13 +34,13 @@ bool SpringBoardComponent::VInit(TiXmlElement* pData)
 void SpringBoardComponent::VPostInit()
 {
     m_pAnimationComponent = MakeStrongPtr(m_pOwner->GetComponent<AnimationComponent>()).get();
-    assert(m_pAnimationComponent != NULL);
+    assert(m_pAnimationComponent != nullptr);
 
     if (m_Properties.idleAnimName == "NONE")
     {
-        Animation* pIdleAnim = Animation::CreateAnimation(1, 0, "NONE", m_pAnimationComponent);
+        std::shared_ptr<Animation> pIdleAnim = Animation::CreateAnimation(1, 0, "NONE", m_pAnimationComponent);
         assert(pIdleAnim);
-        assert(m_pAnimationComponent->AddAnimation("NONE", pIdleAnim));
+        DO_AND_CHECK(m_pAnimationComponent->AddAnimation("NONE", pIdleAnim));
     }
 
     m_pAnimationComponent->AddObserver(this);
@@ -62,7 +62,7 @@ void SpringBoardComponent::VOnAnimationFrameChanged(Animation* pAnimation, Anima
             // Only does anything for Claw I assume
             for (Actor* pStandingActor : m_StandingActorsList)
             {
-                auto pPC = MakeStrongPtr(pStandingActor->GetComponent<PhysicsComponent>());
+                auto pPC = pStandingActor->GetPhysicsComponent();
                 if (pPC)
                 {
                     pPC->SetIsForcedUp(true, (int)m_Properties.springHeight);

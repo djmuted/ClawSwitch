@@ -27,6 +27,7 @@ ControllableComponent::ControllableComponent()
     m_Active(false),
     m_DuckingTime(0),
     m_LookingUpTime(0),
+    m_FrozenTime(0),
     m_bFrozen(false),
     m_MaxJumpHeight(0)
 { }
@@ -49,8 +50,7 @@ bool ControllableComponent::VInit(TiXmlElement* data)
 
 void ControllableComponent::VPostInit()
 {
-    shared_ptr<PhysicsComponent> pPhysicsComponent =
-        MakeStrongPtr(m_pOwner->GetComponent<PhysicsComponent>(PhysicsComponent::g_Name));
+    shared_ptr<PhysicsComponent> pPhysicsComponent = m_pOwner->GetPhysicsComponent();
     if (pPhysicsComponent)
     {
         pPhysicsComponent->SetControllableComponent(this);
@@ -108,7 +108,7 @@ void ClawControllableComponent::VPostInit()
 
     m_pRenderComponent = MakeStrongPtr(m_pOwner->GetComponent<ActorRenderComponent>(ActorRenderComponent::g_Name)).get();
     m_pClawAnimationComponent = MakeStrongPtr(m_pOwner->GetComponent<AnimationComponent>(AnimationComponent::g_Name)).get();
-    m_pPositionComponent = MakeStrongPtr(m_pOwner->GetComponent<PositionComponent>(PositionComponent::g_Name)).get();
+    m_pPositionComponent = m_pOwner->GetPositionComponent().get();
     m_pAmmoComponent = MakeStrongPtr(m_pOwner->GetComponent<AmmoComponent>(AmmoComponent::g_Name)).get();
     m_pPowerupComponent = MakeStrongPtr(m_pOwner->GetComponent<PowerupComponent>(PowerupComponent::g_Name)).get();
     m_pHealthComponent = MakeStrongPtr(m_pOwner->GetComponent<HealthComponent>(HealthComponent::g_Name)).get();
@@ -125,7 +125,7 @@ void ClawControllableComponent::VPostInit()
     auto pHealthComponent = MakeStrongPtr(m_pOwner->GetComponent<HealthComponent>(HealthComponent::g_Name));
     pHealthComponent->AddObserver(this);
 
-    m_pPhysicsComponent = MakeStrongPtr(m_pOwner->GetComponent<PhysicsComponent>(PhysicsComponent::g_Name)).get();
+    m_pPhysicsComponent = m_pOwner->GetPhysicsComponent().get();
 
     // Sounds that play when claw takes some damage
     m_TakeDamageSoundList.push_back(SOUND_CLAW_TAKE_DAMAGE1);
@@ -152,6 +152,7 @@ void ClawControllableComponent::VPostInit()
     // No existing animation for the top-ladder climb...
     {
         std::vector<AnimationFrame> climbAnimFrames;
+        climbAnimFrames.reserve(389 - 383 + 1);
         for (int i = 0, climbImageId = 383; climbImageId <= 389; climbImageId++, i++)
         {
             AnimationFrame frame;
@@ -161,13 +162,14 @@ void ClawControllableComponent::VPostInit()
             frame.duration = 55;
             climbAnimFrames.push_back(frame);
         }
-        Animation* pClimbAnim = Animation::CreateAnimation(climbAnimFrames, "topclimb", m_pClawAnimationComponent);
+        std::shared_ptr<Animation> pClimbAnim = Animation::CreateAnimation(climbAnimFrames, "topclimb", m_pClawAnimationComponent);
         assert(pClimbAnim);
-        assert(m_pClawAnimationComponent->AddAnimation("topclimb", pClimbAnim));
+        DO_AND_CHECK(m_pClawAnimationComponent->AddAnimation("topclimb", pClimbAnim));
     }
 
     {
         std::vector<AnimationFrame> climbAnimFrames;
+        climbAnimFrames.reserve(389 - 383 + 1);
         for (int i = 0, climbImageId = 389; climbImageId >= 383; climbImageId--, i++)
         {
             AnimationFrame frame;
@@ -177,23 +179,35 @@ void ClawControllableComponent::VPostInit()
             frame.duration = 55;
             climbAnimFrames.push_back(frame);
         }
-        Animation* pClimbAnim = Animation::CreateAnimation(climbAnimFrames, "topclimbdown", m_pClawAnimationComponent);
+        std::shared_ptr<Animation> pClimbAnim = Animation::CreateAnimation(climbAnimFrames, "topclimbdown", m_pClawAnimationComponent);
         assert(pClimbAnim);
-        assert(m_pClawAnimationComponent->AddAnimation("topclimbdown", pClimbAnim));
+        DO_AND_CHECK(m_pClawAnimationComponent->AddAnimation("topclimbdown", pClimbAnim));
     }
 
     {
-        std::vector<AnimationFrame> highFallAnimFrames;
+        AnimationFrame frame;
+        frame.idx = 0;
+        frame.imageId = 100;
+        frame.imageName = "frame100";
+        frame.duration = 500;
+        std::vector<AnimationFrame> freezeAnimFrames = {frame};
+
+        std::shared_ptr<Animation> pFreezeAnim = Animation::CreateAnimation(freezeAnimFrames, "freeze", m_pClawAnimationComponent);
+        assert(pFreezeAnim);
+        DO_AND_CHECK(m_pClawAnimationComponent->AddAnimation("freeze", pFreezeAnim));
+    }
+
+    {
         AnimationFrame frame;
         frame.idx = 0;
         frame.imageId = 401;
         frame.imageName = "frame401";
         frame.duration = 2000;
-        highFallAnimFrames.push_back(frame);
+        std::vector<AnimationFrame> highFallAnimFrames = {frame};
 
-        Animation* pHighFallAnim = Animation::CreateAnimation(highFallAnimFrames, "highfall", m_pClawAnimationComponent);
+        std::shared_ptr<Animation> pHighFallAnim = Animation::CreateAnimation(highFallAnimFrames, "highfall", m_pClawAnimationComponent);
         assert(pHighFallAnim);
-        assert(m_pClawAnimationComponent->AddAnimation("highfall", pHighFallAnim));
+        DO_AND_CHECK(m_pClawAnimationComponent->AddAnimation("highfall", pHighFallAnim));
     }
 }
 
@@ -496,6 +510,7 @@ void ClawControllableComponent::OnAttack()
     if (IsAttackingOrShooting() ||
         m_State == ClawState_Climbing ||
         m_State == ClawState_TakingDamage ||
+        m_State == ClawState_Frozen ||
         m_State == ClawState_Dying ||
         m_State == ClawState_HoldingRope ||
         m_bFrozen)
@@ -571,6 +586,7 @@ void ClawControllableComponent::OnFire(bool outOfAmmo)
         m_State == ClawState_Climbing ||
         m_State == ClawState_Dying || 
         m_State == ClawState_TakingDamage ||
+        m_State == ClawState_Frozen ||
         m_State == ClawState_HoldingRope ||
         m_bFrozen)
     {
@@ -715,6 +731,7 @@ bool ClawControllableComponent::CanMove()
         m_State == ClawState_DuckAttacking ||
         m_State == ClawState_DuckShooting ||
         m_State == ClawState_TakingDamage ||
+        m_State == ClawState_Frozen ||
         m_pClawAnimationComponent->GetCurrentAnimationName() == "land" ||
         (m_LookingUpTime > g_pApp->GetGlobalOptions()->startLookUpOrDownTime) ||
         m_bFrozen)
@@ -723,6 +740,21 @@ bool ClawControllableComponent::CanMove()
     }
 
     return true;
+}
+
+bool ClawControllableComponent::IsActorFrozen()
+{
+    if (m_FrozenTime && m_FrozenTime < g_pApp->GetGlobalOptions()->freezeTime)
+    {
+        return true;
+    }
+
+    if (m_State == ClawState_Frozen)
+    {
+        m_State = ClawState_None;
+    }
+
+    return false;
 }
 
 void ClawControllableComponent::SetCurrentPhysicsState()
@@ -1026,8 +1058,21 @@ void ClawControllableComponent::VOnHealthBelowZero(DamageType damageType, int so
 
 void ClawControllableComponent::VOnHealthChanged(int32 oldHealth, int32 newHealth, DamageType damageType, Point impactPoint, int sourceActorId)
 {
+    // If claw still has health
+    if (newHealth <= 0) {
+        return;
+    } 
+
+    if (damageType == DamageType_SirenProjectile) {
+        m_pClawAnimationComponent->SetAnimation("freeze");
+        AddFrozenTime(1);
+        m_State = ClawState_Frozen;
+        // Since this is abit hacky, return as soon as possible into the method
+        return;
+    }
+
     // When claw takes damage but does not actually die
-    if (newHealth > 0 && oldHealth > newHealth)
+    if (oldHealth > newHealth)
     {
 
         // When Claw is holding rope his animation does not change
@@ -1041,6 +1086,11 @@ void ClawControllableComponent::VOnHealthChanged(int32 oldHealth, int32 newHealt
             {
                 m_pClawAnimationComponent->SetAnimation("damage2");
             }
+        }
+
+        if (damageType == DamageType_Trident) {
+            Point explosionPoint(m_pPositionComponent->GetX() + 50, m_pPositionComponent->GetY());
+            ActorTemplates::CreateSingleAnimation(explosionPoint, AnimationType_TridentExplosion);
         }
 
         // Play random "take damage" sound

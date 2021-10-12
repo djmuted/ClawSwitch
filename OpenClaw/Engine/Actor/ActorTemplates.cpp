@@ -8,7 +8,7 @@
 
 namespace ActorTemplates
 {
-    typedef TiXmlElement* (*PickupCreationFunction)(PickupType pickupType, std::string imageSet, std::string pickupSound, Point position, bool isStatic, const ParamMap& paramMap);
+    typedef TiXmlElement* (*PickupCreationFunction)(PickupType pickupType, const std::string& imageSet, const std::string& pickupSound, const Point& position, bool isStatic, const ParamMap& paramMap);
 
     struct PickupCreationTable
     {
@@ -17,13 +17,13 @@ namespace ActorTemplates
     };
 
     // Need to forward declare this
-    TiXmlElement* CreateXmlData_TreasurePickupActor(PickupType pickupType, std::string imageSet, std::string pickupSound, Point position, bool isStatic, const ParamMap& paramMap);
-    TiXmlElement* CreateXmlData_AmmoPickupActor(PickupType pickupType, std::string imageSet, std::string pickupSound, Point position, bool isStatic, const ParamMap& paramMap);
-    TiXmlElement* CreateXmlData_PowerupPickupActor(PickupType pickupType, std::string imageSet, std::string pickupSound, Point position, bool isStatic, const ParamMap& paramMap);
-    TiXmlElement* CreateXmlData_HealthPickupActor(PickupType pickupType, std::string imageSet, std::string pickupSound, Point position, bool isStatic, const ParamMap& paramMap);
-    TiXmlElement* CreateXmlData_LifePickupActor(PickupType pickupType, std::string imageSet, std::string pickupSound, Point position, bool isStatic, const ParamMap& paramMap);
-    TiXmlElement* CreateXmlData_WarpPickupActor(PickupType pickupType, std::string imageSet, std::string pickupSound, Point position, bool isStatic, const ParamMap& paramMap);
-    TiXmlElement* CreateXmlData_MappiecePickupActor(PickupType pickupType, std::string imageSet, std::string pickupSound, Point position, bool isStatic, const ParamMap& paramMap);
+    TiXmlElement* CreateXmlData_TreasurePickupActor(PickupType pickupType, const std::string& imageSet, const std::string& pickupSound, const Point& position, bool isStatic, const ParamMap& paramMap);
+    TiXmlElement* CreateXmlData_AmmoPickupActor(PickupType pickupType, const std::string& imageSet, const std::string& pickupSound, const Point& position, bool isStatic, const ParamMap& paramMap);
+    TiXmlElement* CreateXmlData_PowerupPickupActor(PickupType pickupType, const std::string& imageSet, const std::string& pickupSound, const Point& position, bool isStatic, const ParamMap& paramMap);
+    TiXmlElement* CreateXmlData_HealthPickupActor(PickupType pickupType, const std::string& imageSet, const std::string& pickupSound, const Point& position, bool isStatic, const ParamMap& paramMap);
+    TiXmlElement* CreateXmlData_LifePickupActor(PickupType pickupType, const std::string& imageSet, const std::string& pickupSound, const Point& position, bool isStatic, const ParamMap& paramMap);
+    TiXmlElement* CreateXmlData_WarpPickupActor(PickupType pickupType, const std::string& imageSet, const std::string& pickupSound, const Point& position, bool isStatic, const ParamMap& paramMap);
+    TiXmlElement* CreateXmlData_MappiecePickupActor(PickupType pickupType, const std::string& imageSet, const std::string& pickupSound, const Point& position, bool isStatic, const ParamMap& paramMap);
 
     PickupCreationTable g_PickupCreationTable[] =
     {
@@ -171,7 +171,7 @@ namespace ActorTemplates
 
     std::string EnumToString_PickupTypeToImageSet(PickupType pickupType)
     {
-        std::map<PickupType, std::string> s_PickupTypeToImageSetMap =
+        static const std::map<PickupType, std::string> s_PickupTypeToImageSetMap =
         {
             { PickupType_Default,                   "GAME_TREASURE_COINS" },
             { PickupType_Treasure_Goldbars,         "GAME_TREASURE_GOLDBARS" },
@@ -363,7 +363,7 @@ namespace ActorTemplates
         imageSet += "/*.PID";
     }
 
-    uint32 GetScorePointsFromImageSet(std::string imageSet)
+    uint32 GetScorePointsFromImageSet(const std::string& imageSet)
     {
         uint32 points = 0;
         if (imageSet == "GAME_TREASURE_COINS") points = 100;
@@ -385,7 +385,7 @@ namespace ActorTemplates
         return points;
     }
 
-    uint32 GetHealthCountFromImageSet(std::string imageSet)
+    uint32 GetHealthCountFromImageSet(const std::string& imageSet)
     {
         uint32 healthCount = 0;
         if (imageSet == "GAME_HEALTH_POTION1") healthCount = 10;
@@ -489,6 +489,21 @@ namespace ActorTemplates
 
         // Never reached but stops compiler from complaining
         return "";
+    }
+
+    int GetOffsetYByZCoord(int zCoord)
+    {
+        // Max Z coordinate from wwd file.
+        const int maxZCoord = (int) zIndexes::MaxIndex;
+        // Ground height in px (It's about a half tile height)
+        const int maxOffset = 32;
+        // Offset of object with middle Z Coord (maxZCoord/2)
+        // Ground already has a fixture ~8px
+        const int middleOffset = (maxOffset / 2) - 8;
+
+        const int normalized = zCoord - maxZCoord / 2;
+        const double coef = (double) maxZCoord / maxOffset;
+        return (int) -(normalized / coef + middleOffset);
     }
 
     std::string FixtureTypeToString(FixtureType fixtureType)
@@ -634,7 +649,7 @@ namespace ActorTemplates
         XML_ADD_TEXT_ELEMENT("Inverted", ToStr(isInverted).c_str(), pComponent);
         XML_ADD_TEXT_ELEMENT("ZCoord", ToStr(zCoord).c_str(), pComponent);
 
-        for (std::string imagePath : imagePaths)
+        for (const std::string &imagePath : imagePaths)
         {
             XML_ADD_TEXT_ELEMENT("ImagePath", imagePath.c_str(), pComponent);
         }
@@ -642,7 +657,7 @@ namespace ActorTemplates
         return pComponent;
     }
 
-    TiXmlElement* CreateActorRenderComponent(std::string imageSet, int32 zCoord, bool isVisible = true, bool isMirrored = false, bool isInverted = false, bool convertImageSetToWildcard = true)
+    TiXmlElement* CreateActorRenderComponent(const std::string& imageSet, uint32 zCoord, bool isVisible = true, bool isMirrored = false, bool isInverted = false, bool convertImageSetToWildcard = true)
     {
         TiXmlElement* pComponent = new TiXmlElement("ActorRenderComponent");
         XML_ADD_TEXT_ELEMENT("Visible", ToStr(isVisible).c_str(), pComponent);
@@ -652,14 +667,17 @@ namespace ActorTemplates
 
         if (convertImageSetToWildcard)
         {
-            ImageSetToWildcardImagePath(imageSet);
+            std::string wildcardImagePath = imageSet;
+            ImageSetToWildcardImagePath(wildcardImagePath);
+            XML_ADD_TEXT_ELEMENT("ImagePath", wildcardImagePath.c_str(), pComponent);
+        } else {
+            XML_ADD_TEXT_ELEMENT("ImagePath", imageSet.c_str(), pComponent);
         }
-        XML_ADD_TEXT_ELEMENT("ImagePath", imageSet.c_str(), pComponent);
 
         return pComponent;
     }
 
-    TiXmlElement* CreateAnimationComponent(std::string animationPath, bool pauseOnStart)
+    TiXmlElement* CreateAnimationComponent(const std::string& animationPath, bool pauseOnStart)
     {
         TiXmlElement* pAnimElem = new TiXmlElement("AnimationComponent");
         XML_ADD_TEXT_ELEMENT("AnimationPath", animationPath.c_str(), pAnimElem);
@@ -702,26 +720,26 @@ namespace ActorTemplates
     }
 
     TiXmlElement* CreatePhysicsComponent(
-        std::string bodyTypeStr,
+        const std::string& bodyTypeStr,
         bool hasFootSensor,
         bool hasCapsuleShape,
         bool hasBulletBehaviour,
         bool hasSensorBehaviour,
-        std::string fixtureTypeStr,
-        Point position,
-        Point positionOffset,
-        std::string collisionShape,
-        Point size,
+        const std::string& fixtureTypeStr,
+        const Point& position,
+        const Point& positionOffset,
+        const std::string& collisionShape,
+        const Point& size,
         float gravityScale,
         bool hasInitialSpeed,
         bool hasInitialImpulse,
-        Point initialSpeed,
+        const Point& initialSpeed,
         /*CollisionFlag*/ uint32 collisionFlag,
         uint32 collisionMask,
         float density,
         float friction,
         float restitution,
-        std::string prefabType = "")
+        const std::string& prefabType = "")
     {
         TiXmlElement* pPhysicsComponent = new TiXmlElement("PhysicsComponent");
         XML_ADD_TEXT_ELEMENT("BodyType", bodyTypeStr.c_str(), pPhysicsComponent);
@@ -775,7 +793,7 @@ namespace ActorTemplates
         XML_ADD_TEXT_ELEMENT("PrefabType", pBodyDef->prefabType.c_str(), pPhysicsComponent);
 
         // Convert actor's fixtures to xml
-        for (ActorFixtureDef fixture : pBodyDef->fixtureList)
+        for (const ActorFixtureDef &fixture : pBodyDef->fixtureList)
         {
             pPhysicsComponent->LinkEndChild(ActorFixtureDefToXml(&fixture));
         }
@@ -783,7 +801,7 @@ namespace ActorTemplates
         return pPhysicsComponent;
     }
 
-    TiXmlElement* CreateFollowableComponent(Point offset, std::string imageSet, std::string animPath)
+    TiXmlElement* CreateFollowableComponent(const Point& offset, const std::string& imageSet, const std::string& animPath)
     {
         TiXmlElement* pFollowableComponentElem = new TiXmlElement("FollowableComponent");
         XML_ADD_2_PARAM_ELEMENT("Offset", "x", offset.x, "y", offset.y, pFollowableComponentElem);
@@ -822,7 +840,7 @@ namespace ActorTemplates
         {
             XML_ADD_TEXT_ELEMENT("DeathAnimationName", deathAnimName.c_str(), pDestroyableComponent);
         }
-        for (auto deathSound : deathSounds)
+        for (auto &deathSound : deathSounds)
         {
             XML_ADD_TEXT_ELEMENT("DeathSound", deathSound.c_str(), pDestroyableComponent);
         }
@@ -858,7 +876,7 @@ namespace ActorTemplates
         return pHealthComponent;
     }
 
-    TiXmlElement* CreateExplodeableComponent(Point explosionSize, int damage, int explodingTime = 100)
+    TiXmlElement* CreateExplodeableComponent(const Point& explosionSize, int damage, int explodingTime = 100)
     {
         TiXmlElement* pExplodeableComponent = new TiXmlElement("ExplodeableComponent");
 
@@ -882,7 +900,7 @@ namespace ActorTemplates
         return pAreaDamageComponent;
     }
 
-    TiXmlElement* CreateXmlData_GlitterComponent(std::string glitterType, bool spawnImmediate, bool followOwner)
+    TiXmlElement* CreateXmlData_GlitterComponent(const std::string& glitterType, bool spawnImmediate, bool followOwner)
     {
         TiXmlElement* pGlitterComponent = new TiXmlElement("GlitterComponent");
 
@@ -895,7 +913,7 @@ namespace ActorTemplates
 
     
 
-    ActorFixtureDef CreateActorAgroRangeFixture(Point size, Point offset, FixtureType fixtureType)
+    ActorFixtureDef CreateActorAgroRangeFixture(const Point& size, const Point& offset, FixtureType fixtureType)
     {
         ActorFixtureDef fixtureDef;
 
@@ -921,7 +939,7 @@ namespace ActorTemplates
         return pTakeDamageStateElem;
     }
 
-    TiXmlElement* CreateXmlData_PatrolState(uint32 animationDelay, double patrolSpeed, int leftPatrolBorder, int rightPatrolBorder, std::string walkAnimation, std::vector<std::string> idleAnimations, bool retainDirection = false)
+    TiXmlElement* CreateXmlData_PatrolState(uint32 animationDelay, double patrolSpeed, int leftPatrolBorder, int rightPatrolBorder, const std::string& walkAnimation, const std::vector<std::string>& idleAnimations, bool retainDirection = false)
     {
         TiXmlElement* pPatrolStateElem = new TiXmlElement("PatrolEnemyAIStateComponent");
         XML_ADD_TEXT_ELEMENT("PatrolSpeed", ToStr(patrolSpeed).c_str(), pPatrolStateElem);
@@ -937,7 +955,7 @@ namespace ActorTemplates
         {
             TiXmlElement* pIdleActionElem = new TiXmlElement("IdleAction");
             XML_ADD_TEXT_ELEMENT("AnimationDelay", ToStr(animationDelay).c_str(), pIdleActionElem);
-            for (auto idleAnim : idleAnimations)
+            for (auto &idleAnim : idleAnimations)
             {
                 XML_ADD_TEXT_ELEMENT("Animation", idleAnim.c_str(), pIdleActionElem);
             }
@@ -976,24 +994,29 @@ namespace ActorTemplates
     {
         assert(!attackActions.empty());
 
+        DamageType attackDamageType = attackActions[0].attackDamageType;
         std::string componentName;
-        if (attackActions[0].attackDamageType == DamageType_MeleeAttack)
+
+        switch (attackDamageType)
         {
-            componentName = "MeleeAttackAIStateComponent";
-        }
-        else if (attackActions[0].attackDamageType == DamageType_Bullet)
-        {
-            componentName = "RangedAttackAIStateComponent";
-        }
-        else
-        {
-            assert(false && "Unknown damage type");
+            case DamageType_MeleeAttack:
+                componentName = "MeleeAttackAIStateComponent";
+                break;
+            
+            case DamageType_Bullet:
+            case DamageType_Trident:
+            case DamageType_SirenProjectile:
+                componentName = "RangedAttackAIStateComponent";
+                break;
+
+            default:
+                assert(false && "Unknown damage type");
         }
 
         TiXmlElement* pAttackStateElem = new TiXmlElement(componentName.c_str());
 
         TiXmlElement* pAttacksElem = new TiXmlElement("Attacks");
-        for (auto attackAction : attackActions)
+        for (auto &attackAction : attackActions)
         {
             TiXmlElement* pAttackActionElem = new TiXmlElement("AttackAction");
             XML_ADD_TEXT_ELEMENT("Animation", attackAction.animation.c_str(), pAttackActionElem);
@@ -1016,7 +1039,7 @@ namespace ActorTemplates
     // Specific functions for creating specific actors
     //=====================================================================================================================
 
-    TiXmlElement* CreateXmlData_SoundTriggerActor(const std::string& sound, Point position, Point size, int enterCount, bool activateDialog)
+    TiXmlElement* CreateXmlData_SoundTriggerActor(const std::string& sound, const Point& position, const Point& size, int enterCount, bool activateDialog)
     {
         // General stuff
 
@@ -1052,7 +1075,7 @@ namespace ActorTemplates
         return pActorElem;
     }
 
-    TiXmlElement* CreateXmlData_SoundTriggerActor(const std::string& sound, const std::string& logicName, Point position, SDL_Rect presetPosition, int enterCount)
+    TiXmlElement* CreateXmlData_SoundTriggerActor(const std::string& sound, const std::string& logicName, const Point& position, const SDL_Rect& presetPosition, int enterCount)
     {
         Point size;
         if (logicName.find("Tiny") != std::string::npos)
@@ -1130,13 +1153,7 @@ namespace ActorTemplates
     template <typename K, typename V>
     bool IsKeyInMap(const K& key, const std::map<K, V>& m)
     {
-        auto findIt = m.find(key);
-        if (findIt == m.end())
-        {
-            return false;
-        }
-
-        return true;
+        return m.count(key);
     }
 
     template <typename K, typename V>
@@ -1164,7 +1181,7 @@ namespace ActorTemplates
     }
 
     // TODO: What is this function specifically for ? Only dynamically spawned pickups ?
-    TiXmlElement* CreateXmlData_GeneralPickupActor(std::string imageSet, Point position, int32 zCoord, bool isStatic, const ParamMap& paramMap)
+    TiXmlElement* CreateXmlData_GeneralPickupActor(const std::string& imageSet, const Point& position, zIndexes zCoord, bool isStatic, const ParamMap& paramMap)
     {
         TiXmlElement* pActorElem = new TiXmlElement("Actor");
         pActorElem->SetAttribute("Type", imageSet.c_str());
@@ -1174,12 +1191,12 @@ namespace ActorTemplates
 
         pActorElem->LinkEndChild(CreatePositionComponent(position.x, position.y));
 
-        std::string originalImageSet = imageSet;
+        std::string wildcardImagePath = imageSet;
 
-        ImageSetToWildcardImagePath(imageSet);
+        ImageSetToWildcardImagePath(wildcardImagePath);
         std::vector<std::string> imagePaths;
-        imagePaths.push_back(imageSet);
-        pActorElem->LinkEndChild(CreateActorRenderComponent(imagePaths, zCoord, true, isMirrored, isInverted));
+        imagePaths.push_back(wildcardImagePath);
+        pActorElem->LinkEndChild(CreateActorRenderComponent(imagePaths, (int32) zCoord, true, isMirrored, isInverted));
 
         pActorElem->LinkEndChild(CreateTriggerComponent(1, false, false));
 
@@ -1241,9 +1258,9 @@ namespace ActorTemplates
         return pActorElem;
     }
 
-    TiXmlElement* CreateXmlData_TreasurePickupActor(PickupType pickupType, std::string imageSet, std::string pickupSound, Point position, bool isStatic, const ParamMap& paramMap)
+    TiXmlElement* CreateXmlData_TreasurePickupActor(PickupType pickupType, const std::string& imageSet, const std::string& pickupSound, const Point& position, bool isStatic, const ParamMap& paramMap)
     {
-        TiXmlElement* pActor = CreateXmlData_GeneralPickupActor(imageSet, position, 1000, isStatic, paramMap);
+        TiXmlElement* pActor = CreateXmlData_GeneralPickupActor(imageSet, position, zIndexes::Treasure, isStatic, paramMap);
 
         TiXmlElement* pTreasurePickupComponent = new TiXmlElement("TreasurePickupComponent");
         AddXmlTextElement("PickupType", (int)pickupType, pTreasurePickupComponent);
@@ -1260,9 +1277,9 @@ namespace ActorTemplates
         return pActor;
     }
 
-    TiXmlElement* CreateXmlData_AmmoPickupActor(PickupType pickupType, std::string imageSet, std::string pickupSound, Point position, bool isStatic, const ParamMap& paramMap)
+    TiXmlElement* CreateXmlData_AmmoPickupActor(PickupType pickupType, const std::string& imageSet, const std::string& pickupSound, const Point& position, bool isStatic, const ParamMap& paramMap)
     {
-        TiXmlElement* pActor = CreateXmlData_GeneralPickupActor(imageSet, position, 1000, isStatic, paramMap);
+        TiXmlElement* pActor = CreateXmlData_GeneralPickupActor(imageSet, position, zIndexes::AmmoPickup, isStatic, paramMap);
 
         TiXmlElement* pAmmoPickupComponent = new TiXmlElement("AmmoPickupComponent");
         AddXmlTextElement("PickupType", (int)pickupType, pAmmoPickupComponent);
@@ -1274,9 +1291,9 @@ namespace ActorTemplates
         return pActor;
     }
 
-    TiXmlElement* CreateXmlData_LifePickupActor(PickupType pickupType, std::string imageSet, std::string pickupSound, Point position, bool isStatic, const ParamMap& paramMap)
+    TiXmlElement* CreateXmlData_LifePickupActor(PickupType pickupType, const std::string& imageSet, const std::string& pickupSound, const Point& position, bool isStatic, const ParamMap& paramMap)
     {
-        TiXmlElement* pActor = CreateXmlData_GeneralPickupActor(imageSet, position, 1000, isStatic, paramMap);
+        TiXmlElement* pActor = CreateXmlData_GeneralPickupActor(imageSet, position, zIndexes::LifePickup, isStatic, paramMap);
 
         TiXmlElement* pLifePickupComponent = new TiXmlElement("LifePickupComponent");
         AddXmlTextElement("PickupType", (int)pickupType, pLifePickupComponent);
@@ -1287,9 +1304,9 @@ namespace ActorTemplates
         return pActor;
     }
 
-    TiXmlElement* CreateXmlData_HealthPickupActor(PickupType pickupType, std::string imageSet, std::string pickupSound, Point position, bool isStatic, const ParamMap& paramMap)
+    TiXmlElement* CreateXmlData_HealthPickupActor(PickupType pickupType, const std::string& imageSet, const std::string& pickupSound, const Point& position, bool isStatic, const ParamMap& paramMap)
     {
-        TiXmlElement* pActor = CreateXmlData_GeneralPickupActor(imageSet, position, 1000, isStatic, paramMap);
+        TiXmlElement* pActor = CreateXmlData_GeneralPickupActor(imageSet, position, zIndexes::HealthPickup, isStatic, paramMap);
 
         TiXmlElement* pHealthPickupComponent = new TiXmlElement("HealthPickupComponent");
         AddXmlTextElement("PickupType", (int)pickupType, pHealthPickupComponent);
@@ -1300,9 +1317,9 @@ namespace ActorTemplates
         return pActor;
     }
 
-    TiXmlElement* CreateXmlData_PowerupPickupActor(PickupType pickupType, std::string imageSet, std::string pickupSound, Point position, bool isStatic, const ParamMap& paramMap)
+    TiXmlElement* CreateXmlData_PowerupPickupActor(PickupType pickupType, const std::string& imageSet, const std::string& pickupSound, const Point& position, bool isStatic, const ParamMap& paramMap)
     {
-        TiXmlElement* pActor = CreateXmlData_GeneralPickupActor(imageSet, position, 5000, isStatic, paramMap);
+        TiXmlElement* pActor = CreateXmlData_GeneralPickupActor(imageSet, position, zIndexes::PowerupPickup, isStatic, paramMap);
 
         TiXmlElement* pPowerupPickupComponent = new TiXmlElement("PowerupPickupComponent");
         AddXmlTextElement("PickupType", (int)pickupType, pPowerupPickupComponent);
@@ -1325,9 +1342,9 @@ namespace ActorTemplates
         return pActor;
     }
 
-    TiXmlElement* CreateXmlData_WarpPickupActor(PickupType pickupType, std::string imageSet, std::string pickupSound, Point position, bool isStatic, const ParamMap& paramMap)
+    TiXmlElement* CreateXmlData_WarpPickupActor(PickupType pickupType, const std::string& imageSet, const std::string& pickupSound, const Point& position, bool isStatic, const ParamMap& paramMap)
     {
-        TiXmlElement* pActor = CreateXmlData_GeneralPickupActor(imageSet, position, 1000, isStatic, paramMap);
+        TiXmlElement* pActor = CreateXmlData_GeneralPickupActor(imageSet, position, zIndexes::WarpPickup, isStatic, paramMap);
 
         std::string destinationX = StrictFindValueInMap(std::string("DestinationX"), paramMap);
         std::string destinationY = StrictFindValueInMap(std::string("DestinationY"), paramMap);
@@ -1344,9 +1361,9 @@ namespace ActorTemplates
         return pActor;
     }
 
-    TiXmlElement* CreateXmlData_MappiecePickupActor(PickupType pickupType, std::string imageSet, std::string pickupSound, Point position, bool isStatic, const ParamMap& paramMap)
+    TiXmlElement* CreateXmlData_MappiecePickupActor(PickupType pickupType, const std::string& imageSet, const std::string& pickupSound, const Point& position, bool isStatic, const ParamMap& paramMap)
     {
-        TiXmlElement* pActor = CreateXmlData_GeneralPickupActor(imageSet, position, 2000, isStatic, paramMap);
+        TiXmlElement* pActor = CreateXmlData_GeneralPickupActor(imageSet, position, zIndexes::EndLevelPickup, isStatic, paramMap);
 
         TiXmlElement* pMappiecePickupComponent = new TiXmlElement("EndLevelPickupComponent");
         AddXmlTextElement("PickupType", (int)pickupType, pMappiecePickupComponent);
@@ -1362,7 +1379,7 @@ namespace ActorTemplates
         pActor->SetAttribute("Type", imageSet.c_str());
 
         pActor->LinkEndChild(CreatePositionComponent(0, 0));
-        pActor->LinkEndChild(CreateActorRenderComponent(imageSet, 8000, false));
+        pActor->LinkEndChild(CreateActorRenderComponent(imageSet, (int32) zIndexes::PowerupSparkle, false));
         pActor->LinkEndChild(CreateCycleAnimationComponent(cycleDuration));
 
         TiXmlElement* pPowerupSparkleAIComponent = new TiXmlElement("PowerupSparkleAIComponent");
@@ -1371,7 +1388,7 @@ namespace ActorTemplates
         return pActor;
     }
 
-    TiXmlElement* CreateXmlData_ClawProjectileActor(AmmoType ammoType, Direction direction, Point position, int sourceActorId, const Point& initialImpulse)
+    TiXmlElement* CreateXmlData_ClawProjectileActor(AmmoType ammoType, Direction direction, const Point& position, int sourceActorId, const Point& initialImpulse)
     {
         std::string imageSet = GetImageSetFromClawAmmoType(ammoType);
 
@@ -1402,7 +1419,7 @@ namespace ActorTemplates
         }
 
         pActor->LinkEndChild(CreatePositionComponent(position.x, position.y));
-        pActor->LinkEndChild(CreateActorRenderComponent(imageSet.c_str(), 2000));
+        pActor->LinkEndChild(CreateActorRenderComponent(imageSet, (int32) zIndexes::ClawProjectile));
         pActor->LinkEndChild(CreatePhysicsComponent(
             "Dynamic",  // Type - "Dynamic", "Kinematic", "Static"
             false,      // Has foot sensor ?
@@ -1459,7 +1476,7 @@ namespace ActorTemplates
         return pActor;
     }
 
-    TiXmlElement* CreateXmlData_ProjectileActor(std::string imageSet, uint32 damage, DamageType damageType, Direction direction, Point position, CollisionFlag collisionFlag, uint32 collisionMask, int sourceActorId)
+    TiXmlElement* CreateXmlData_ProjectileActor(const std::string& imageSet, uint32 damage, DamageType damageType, Direction direction, const Point& position, CollisionFlag collisionFlag, uint32 collisionMask, int sourceActorId)
     {
         TiXmlElement* pActor = new TiXmlElement("Actor");
         pActor->SetAttribute("Type", imageSet.c_str());
@@ -1468,7 +1485,7 @@ namespace ActorTemplates
         if (direction == Direction_Left) { speed *= -1; }
 
         pActor->LinkEndChild(CreatePositionComponent(position.x, position.y));
-        pActor->LinkEndChild(CreateActorRenderComponent(imageSet.c_str(), 5000));
+        pActor->LinkEndChild(CreateActorRenderComponent(imageSet, (int32) zIndexes::Projectile));
 
         ActorBodyDef bodyDef;
         bodyDef.bodyType = b2_dynamicBody;
@@ -1492,13 +1509,13 @@ namespace ActorTemplates
         return pActor;
     }
 
-    TiXmlElement* CreateXmlData_CrateActor(std::string imageSet, Point position, const std::vector<PickupType>& loot, uint32 health, int32 zCoord)
+    TiXmlElement* CreateXmlData_CrateActor(const std::string& imageSet, const Point& position, const std::vector<PickupType>& loot, uint32 health, int32 zCoord)
     {
         TiXmlElement* pActor = new TiXmlElement("Actor");
         pActor->SetAttribute("Type", imageSet.c_str());
 
         pActor->LinkEndChild(CreatePositionComponent(position.x, position.y));
-        pActor->LinkEndChild(CreateActorRenderComponent(imageSet.c_str(), zCoord));
+        pActor->LinkEndChild(CreateActorRenderComponent(imageSet, zCoord));
         pActor->LinkEndChild(CreatePhysicsComponent(
             "Dynamic",  // Type - "Dynamic", "Kinematic", "Static"
             false,      // Has foot sensor ?
@@ -1507,7 +1524,7 @@ namespace ActorTemplates
             false,       // Has sensor behaviour ?
             "Crate",    // Fixture type
             position,      // Position
-            Point(0, 0),   // Offset - where to move the body upon its placement
+            Point(0, GetOffsetYByZCoord(zCoord)),   // Offset - where to move the body upon its placement
             "Rectangle",   // Body shape - "Rectangle" or "Circle"
             Point(44, 40),   // Size - Leave blank if you want size to be determined by its default image
             0.8f,          // Gravity scale - set to 0.0f if no gravity is desired
@@ -1528,13 +1545,14 @@ namespace ActorTemplates
         return pActor;
     }
 
-    TiXmlElement* CreateXmlData_PowderKegActor(std::string imageSet, Point position, int32 damage, int32 zCoord)
+    TiXmlElement* CreateXmlData_PowderKegActor(const std::string& imageSet, const Point& position, int32 damage, int32 zCoord)
     {
+        // TODO: create xml actor prototype and implement lift-throw logic
         TiXmlElement* pActor = new TiXmlElement("Actor");
         pActor->SetAttribute("Type", imageSet.c_str());
 
         pActor->LinkEndChild(CreatePositionComponent(position.x, position.y));
-        pActor->LinkEndChild(CreateActorRenderComponent(imageSet.c_str(), 0));
+        pActor->LinkEndChild(CreateActorRenderComponent(imageSet, zCoord));
 
         /*ActorBodyDef bodyDef;
         bodyDef.bodyType = b2_dynamicBody;
@@ -1550,27 +1568,27 @@ namespace ActorTemplates
         pActor->LinkEndChild(CreatePhysicsComponent(&bodyDef));*/
 
         pActor->LinkEndChild(CreatePhysicsComponent(
-            "Static",  // Type - "Dynamic", "Kinematic", "Static"
+            "Dynamic",  // Type - "Dynamic", "Kinematic", "Static"
             false,      // Has foot sensor ?
             false,      // Has capsule shape ?
             true,       // Has bullet behaviour ?
             false,       // Has sensor behaviour ?
-            "Crate",    // Fixture typeactor
+            "PowderKeg",    // Fixture typeactor
             position,      // Position
-            Point(0, 0),   // Offset - where to move the body upon its placement
+            Point(0, GetOffsetYByZCoord(zCoord)),   // Offset - where to move the body upon its placement
             "Rectangle",   // Body shape - "Rectangle" or "Circle"
             Point(0, 0),   // Size - Leave blank if you want size to be determined by its default image
-            0.0f,          // Gravity scale - set to 0.0f if no gravity is desired
+            0.8f,          // Gravity scale - set to 0.0f if no gravity is desired
             false,          // Has any initial speed ?
             false,         // Has initial impulse ?
             Point(0, 0), // If it does, specify it here
             CollisionFlag_PowderKeg,  // Collision flag - e.g. What is this actor ?
-            (CollisionFlag_Crate | CollisionFlag_Solid | CollisionFlag_Ground | CollisionFlag_Bullet | CollisionFlag_Explosion),  // Collision mask - e.g. With what does this actor collide with ?
+            (CollisionFlag_Solid | CollisionFlag_Ground | CollisionFlag_Bullet | CollisionFlag_Explosion),  // Collision mask - e.g. With what does this actor collide with ?
             0.0f,  // Friction - with floor and so
             0.0f,  // Density - determines if this character bounces
-            0.3f)); // Restitution - makes object bounce
+            0.0f)); // Restitution - makes object bounce
 
-        AddXmlTextElement("ClampToGround", true, pActor->FirstChildElement("PhysicsComponent"));
+        //AddXmlTextElement("ClampToGround", true, pActor->FirstChildElement("PhysicsComponent"));
 
         pActor->LinkEndChild(CreateAnimationComponent("/LEVEL1/ANIS/POWDERKEG/EXPLODE.ANI", true));
         pActor->LinkEndChild(CreateDestroyableComponent(true, "explode", { SOUND_LEVEL1_KEG_EXPLODE }));
@@ -1580,7 +1598,8 @@ namespace ActorTemplates
         return pActor;
     }
 
-    TiXmlElement* CreateXmlData_AreaDamageActor(Point position, Point size, int32 damage, CollisionFlag collisionFlag, std::string shape, DamageType damageType, Direction hitDirection, int sourceActorId, Point positionOffset, std::string imageSet = "", int32 zCoord = 0)
+    TiXmlElement* CreateXmlData_AreaDamageActor(const Point& position, const Point& size, int32 damage, CollisionFlag collisionFlag, const std::string& shape, DamageType damageType,
+            Direction hitDirection, int sourceActorId, const Point& positionOffset, const std::string& imageSet = "", zIndexes zCoord = zIndexes::MinIndex)
     {
         TiXmlElement* pActor = new TiXmlElement("Actor");
         pActor->SetAttribute("Type", "AreaDamage");
@@ -1588,7 +1607,7 @@ namespace ActorTemplates
         pActor->LinkEndChild(CreatePositionComponent(position.x, position.y));
         if (!imageSet.empty())
         {
-            pActor->LinkEndChild(CreateActorRenderComponent(imageSet.c_str(), zCoord));
+            pActor->LinkEndChild(CreateActorRenderComponent(imageSet, (int32) zCoord));
             pActor->LinkEndChild(CreateCycleAnimationComponent(75, false));
         }
 
@@ -1657,13 +1676,13 @@ namespace ActorTemplates
         return pActor;
     }
 
-    TiXmlElement* CreateXmlData_CrumblingPeg(std::string imageSet, Point position, int32 zCoord)
+    TiXmlElement* CreateXmlData_CrumblingPeg(const std::string& imageSet, const Point& position, int32 zCoord)
     {
         TiXmlElement* pActor = new TiXmlElement("Actor");
         pActor->SetAttribute("Type", imageSet.c_str());
 
         pActor->LinkEndChild(CreatePositionComponent(position.x, position.y));
-        pActor->LinkEndChild(CreateActorRenderComponent(imageSet.c_str(), zCoord));
+        pActor->LinkEndChild(CreateActorRenderComponent(imageSet, zCoord));
         pActor->LinkEndChild(CreateCycleAnimationComponent(50, true));
         pActor->LinkEndChild(CreatePhysicsComponent(
             "Static",  // Type - "Dynamic", "Kinematic", "Static"
@@ -1695,7 +1714,7 @@ namespace ActorTemplates
         return pActor;
     }
 
-    TiXmlElement* CreateXmlData_GlitterActor(std::string glitterType, Point position, int32 zCoord)
+    TiXmlElement* CreateXmlData_GlitterActor(const std::string& glitterType, const Point& position, zIndexes zCoord)
     {
         std::string imageSet = GetImageSetFromGlitterType(glitterType);
 
@@ -1703,13 +1722,13 @@ namespace ActorTemplates
         pActor->SetAttribute("Type", imageSet.c_str());
 
         pActor->LinkEndChild(CreatePositionComponent(position.x, position.y));
-        pActor->LinkEndChild(CreateActorRenderComponent(imageSet.c_str(), zCoord));
+        pActor->LinkEndChild(CreateActorRenderComponent(imageSet, (int32) zCoord));
         pActor->LinkEndChild(CreateCycleAnimationComponent(99, false));
 
         return pActor;
     }
 
-    TiXmlElement* CreateXmlData_ScorePopupActor(Point position, int score)
+    TiXmlElement* CreateXmlData_ScorePopupActor(const Point& position, int score)
     {
         std::string imageSet = GetImageSetFromScoreCount(score);
         //std::string imageSet = "GAME_POINTS";
@@ -1718,7 +1737,7 @@ namespace ActorTemplates
         pActor->SetAttribute("Type", imageSet.c_str());
 
         pActor->LinkEndChild(CreatePositionComponent(position.x, position.y));
-        pActor->LinkEndChild(CreateActorRenderComponent(imageSet.c_str(), 0, true, false, false, false));
+        pActor->LinkEndChild(CreateActorRenderComponent(imageSet, (int32) zIndexes::ScorePopup, true, false, false, false));
 
         PredefinedMove move;
         move.msDuration = 650;
@@ -1728,13 +1747,13 @@ namespace ActorTemplates
         return pActor;
     }
 
-    TiXmlElement* CreateXmlData_CheckpointActor(std::string imageSet, Point position, int32 zCoord, Point spawnPosition, bool isSaveCheckpoint, uint32 saveCheckpointNumber)
+    TiXmlElement* CreateXmlData_CheckpointActor(const std::string& imageSet, const Point& position, int32 zCoord, const Point& spawnPosition, bool isSaveCheckpoint, uint32 saveCheckpointNumber)
     {
         TiXmlElement* pActor = new TiXmlElement("Actor");
         pActor->SetAttribute("Type", imageSet.c_str());
 
         pActor->LinkEndChild(CreatePositionComponent(position.x, position.y));
-        pActor->LinkEndChild(CreateActorRenderComponent(imageSet.c_str(), zCoord));
+        pActor->LinkEndChild(CreateActorRenderComponent(imageSet, zCoord));
         pActor->LinkEndChild(CreateAnimationComponent("/GAME/ANIS/CHECKPOINT/*", true));
         pActor->LinkEndChild(CreateTriggerComponent(10, false, false));
         pActor->LinkEndChild(CreatePhysicsComponent(
@@ -1768,13 +1787,13 @@ namespace ActorTemplates
         return pActor;
     }
 
-    TiXmlElement* CreateXmlData_Actor(ActorPrototype proto, Point position)
+    TiXmlElement* CreateXmlData_Actor(ActorPrototype proto, const Point &position)
     {
         TiXmlElement* pActorElem = g_pApp->GetActorPrototypeElem(proto);
         assert(pActorElem != NULL);
 
         //----------- Position
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
             "x", (int)position.x, "y", (int)position.y));
 
         return pActorElem;
@@ -1793,17 +1812,17 @@ namespace ActorTemplates
         return pActorElem;
     }
 
-    TiXmlElement* CreateXmlData_EnemyAIActor(ActorPrototype enemyType, Point position, const std::vector<PickupType>& loot, int32 minPatrolX, int32 maxPatrolX, bool isAlwaysIdle, bool isMirrored)
+    TiXmlElement* CreateXmlData_EnemyAIActor(ActorPrototype enemyType, const Point& position, const std::vector<PickupType>& loot, int32 minPatrolX, int32 maxPatrolX, bool isAlwaysIdle, bool isMirrored)
     {
         TiXmlElement* pActorElem = g_pApp->GetActorPrototypeElem(enemyType);
         assert(pActorElem != NULL);
 
         //----------- Position
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
             "x", (int)position.x, "y", (int)position.y));
 
         // ----------- RenderComponent - Mirrored ?
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.ActorRenderComponent.Mirrored", isMirrored));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.ActorRenderComponent.Mirrored", isMirrored));
 
         //----------- Loot
         TiXmlElement* pLootComponentElem = GetTiXmlElementFromPath(pActorElem, "Actor.LootComponent");
@@ -1814,55 +1833,55 @@ namespace ActorTemplates
         }
 
         //----------- Patrol borders
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.PatrolEnemyAIStateComponent.IsAlwaysIdle", isAlwaysIdle));
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.PatrolEnemyAIStateComponent.LeftPatrolBorder", minPatrolX));
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.PatrolEnemyAIStateComponent.RightPatrolBorder", maxPatrolX));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.PatrolEnemyAIStateComponent.IsAlwaysIdle", isAlwaysIdle));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.PatrolEnemyAIStateComponent.LeftPatrolBorder", minPatrolX));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.PatrolEnemyAIStateComponent.RightPatrolBorder", maxPatrolX));
 
         return pActorElem;
     }
 
-    TiXmlElement* CreateXmlData_ElevatorActor(ActorPrototype elevatorProto, Point position, const std::string& imagePath, const ElevatorDef& elevatorDef)
+    TiXmlElement* CreateXmlData_ElevatorActor(ActorPrototype elevatorProto, const Point& position, const std::string& imagePath, const ElevatorDef& elevatorDef)
     {
         TiXmlElement* pActorElem = g_pApp->GetActorPrototypeElem(elevatorProto);
         assert(pActorElem != NULL);
 
         //----------- Position
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position", 
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
             "x", (int)position.x, "y", (int)position.y));
 
         //----------- ActorRenderComponent
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.ActorRenderComponent.ImagePath", imagePath));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.ActorRenderComponent.ImagePath", imagePath));
 
         //----------- Elevator properties
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.KinematicComponent.Speed", 
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.KinematicComponent.Speed",
             "x", (int)elevatorDef.speed.x, "y", (int)elevatorDef.speed.y));
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.KinematicComponent.MinPosition",
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.KinematicComponent.MinPosition",
             "x", (int)elevatorDef.minPosition.x, "y", (int)elevatorDef.minPosition.y));
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.KinematicComponent.MaxPosition",
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.KinematicComponent.MaxPosition",
             "x", (int)elevatorDef.maxPosition.x, "y", (int)elevatorDef.maxPosition.y));
 
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.KinematicComponent.HasTriggerBehaviour", elevatorDef.hasTriggerBehaviour));
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.KinematicComponent.HasStartBehaviour", elevatorDef.hasStartBehaviour));
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.KinematicComponent.HasStopBehaviour", elevatorDef.hasStopBehaviour));
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.KinematicComponent.HasOneWayBehaviour", elevatorDef.hasOneWayBehaviour));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.KinematicComponent.HasTriggerBehaviour", elevatorDef.hasTriggerBehaviour));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.KinematicComponent.HasStartBehaviour", elevatorDef.hasStartBehaviour));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.KinematicComponent.HasStopBehaviour", elevatorDef.hasStopBehaviour));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.KinematicComponent.HasOneWayBehaviour", elevatorDef.hasOneWayBehaviour));
 
         return pActorElem;
     }
 
-    TiXmlElement* CreateXmlData_TogglePegActor(ActorPrototype togglePegProto, Point position, const TogglePegDef& togglePegDef)
+    TiXmlElement* CreateXmlData_TogglePegActor(ActorPrototype togglePegProto, const Point& position, const TogglePegDef& togglePegDef)
     {
         TiXmlElement* pActorElem = g_pApp->GetActorPrototypeElem(togglePegProto);
         assert(pActorElem != NULL);
 
         //----------- Position
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
             "x", (int)position.x, "y", (int)position.y));
 
         //----------- TogglePeg properties
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.TogglePegAIComponent.Delay", togglePegDef.delay));
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.TogglePegAIComponent.TimeOn", togglePegDef.timeOn));
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.TogglePegAIComponent.TimeOff", togglePegDef.timeOff));
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.TogglePegAIComponent.AlwaysOn", togglePegDef.isAlwaysOn));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.TogglePegAIComponent.Delay", togglePegDef.delay));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.TogglePegAIComponent.TimeOn", togglePegDef.timeOn));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.TogglePegAIComponent.TimeOff", togglePegDef.timeOff));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.TogglePegAIComponent.AlwaysOn", togglePegDef.isAlwaysOn));
 
         return pActorElem;
     }
@@ -1873,14 +1892,14 @@ namespace ActorTemplates
         assert(pActorElem != NULL);
 
         //----------- Position
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
             "x", (int)position.x, "y", (int)position.y));
 
         //----------- ActorRenderComponent
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.ActorRenderComponent.ImagePath", imagePath));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.ActorRenderComponent.ImagePath", imagePath));
 
         //----------- TogglePeg properties
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.CrumblingPegAIComponent.CrumbleDelay", crumbleDelay));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.CrumblingPegAIComponent.CrumbleDelay", crumbleDelay));
 
         return pActorElem;
     }
@@ -1891,11 +1910,11 @@ namespace ActorTemplates
         assert(pActorElem != NULL);
 
         //----------- Position
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
             "x", (int)position.x, "y", (int)position.y));
 
         //----------- Z Coord
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.ActorRenderComponent.ZCoord", zCoord));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.ActorRenderComponent.ZCoord", zCoord));
 
         //----------- Loot
         TiXmlElement* pLootComponentElem = GetTiXmlElementFromPath(pActorElem, "Actor.LootComponent");
@@ -1914,13 +1933,13 @@ namespace ActorTemplates
         assert(pActorElem != NULL);
 
         //----------- Position
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
             "x", (int)position.x, "y", (int)position.y));
 
         //----------- Physics
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.PhysicsComponent.PositionOffset",
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.PhysicsComponent.PositionOffset",
             "x", (int)spawnAreaOffset.x, "y", (int)spawnAreaOffset.y));
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.PhysicsComponent.CollisionSize",
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.PhysicsComponent.CollisionSize",
             "width", (int)spawnAreaSize.x, "height", (int)spawnAreaSize.y));
 
         //----------- SpawnAreaComponent
@@ -1949,23 +1968,23 @@ namespace ActorTemplates
         assert(pActorElem != NULL);
 
         //----------- Position
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
             "x", (int)position.x, "y", (int)position.y));
 
         //----------- ProjectileSpawnerComponent
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.ProjectileSpawnerComponent.ProjectileDirection",
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.ProjectileSpawnerComponent.ProjectileDirection",
             EnumToString_Direction(shootDir)));
 
         return pActorElem;
     }
 
-    TiXmlElement* CreateXmlData_ProjectileActor(ActorPrototype proto, Point position, Direction dir, int sourceActorId)
+    TiXmlElement* CreateXmlData_ProjectileActor(ActorPrototype proto, const Point& position, Direction dir, int sourceActorId)
     {
         TiXmlElement* pActorElem = g_pApp->GetActorPrototypeElem(proto);
         assert(pActorElem != NULL);
 
         //----------- Position
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
             "x", (int)position.x, "y", (int)position.y));
 
         TiXmlElement* pProjectileAIComponent = GetTiXmlElementFromPath(pActorElem, "Actor.ProjectileAIComponent");
@@ -1980,10 +1999,10 @@ namespace ActorTemplates
             assert(pProjectileSpeedElem != NULL);
 
             Point projectileSpeed;
-            assert(ParseValueFromXmlElem(&projectileSpeed, pProjectileSpeedElem, "x", "y"));
+            DO_AND_CHECK(ParseValueFromXmlElem(&projectileSpeed, pProjectileSpeedElem, "x", "y"));
             projectileSpeed.x *= -1.0;
 
-            assert(SetTiXmlNode2Attribute(pActorElem, "Actor.ProjectileAIComponent.ProjectileSpeed",
+            DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.ProjectileAIComponent.ProjectileSpeed",
                 "x", (int)projectileSpeed.x, "y", (int)projectileSpeed.y));
 
             // Mirror render component
@@ -1994,28 +2013,28 @@ namespace ActorTemplates
                 ParseValueFromXmlElem(&isMirroredByDefault, pIsMirroredElem);
             }
 
-            assert(SetTiXmlNodeValue(pActorElem, "Actor.ActorRenderComponent.Mirrored", isMirroredByDefault == false));
+            DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.ActorRenderComponent.Mirrored", isMirroredByDefault == false));
         }
 
         return pActorElem;
     }
 
-    TiXmlElement* CreateXmlData_StaticImage(ActorPrototype proto, Point position, const std::string& imagePath, const AnimationDef& aniDef)
+    TiXmlElement* CreateXmlData_StaticImage(ActorPrototype proto, const Point& position, const std::string& imagePath, const AnimationDef& aniDef)
     {
         TiXmlElement* pActorElem = g_pApp->GetActorPrototypeElem(proto);
         assert(pActorElem != NULL);
 
         //----------- Position
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
             "x", (int)position.x, "y", (int)position.y));
 
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.ActorRenderComponent.ImagePath", imagePath));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.ActorRenderComponent.ImagePath", imagePath));
 
         if (proto == ActorPrototype_StaticAnimatedImage && aniDef.hasAnimation)
         {
-            assert(SetTiXmlNodeValue(pActorElem, "Actor.AnimationComponent.SpecialAnimation.Type", "cycle"));
-            assert(SetTiXmlNodeValue(pActorElem, "Actor.AnimationComponent.SpecialAnimation.FrameDuration", aniDef.cycleAnimationDuration));
-            assert(SetTiXmlNodeValue(pActorElem, "Actor.AnimationComponent.SpecialAnimation.HasPositionDelay", false));
+            DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.AnimationComponent.SpecialAnimation.Type", "cycle"));
+            DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.AnimationComponent.SpecialAnimation.FrameDuration", aniDef.cycleAnimationDuration));
+            DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.AnimationComponent.SpecialAnimation.HasPositionDelay", false));
 
             //pActorElem->Print(stdout, -1);
         }
@@ -2029,51 +2048,22 @@ namespace ActorTemplates
         assert(pActorElem != NULL);
 
         //----------- Position
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
             "x", (int)position.x, "y", (int)position.y));
 
         //----------- ActorRenderComponent
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.ActorRenderComponent.ImagePath", imagePath));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.ActorRenderComponent.ImagePath", imagePath));
 
         // ---------- PathElevatorComponent
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.PathElevatorComponent.Speed", def.speed));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.PathElevatorComponent.Speed", def.speed));
 
         TiXmlElement* pPathElevatorStepsElem = GetTiXmlElementFromPath(pActorElem, "Actor.PathElevatorComponent.ElevatorSteps");
         assert(pPathElevatorStepsElem != NULL);
 
-        for (ElevatorStepDef stepDef : def.elevatorPath)
+        for (const ElevatorStepDef &stepDef : def.elevatorPath)
         {
             pPathElevatorStepsElem->LinkEndChild(stepDef.ToXml());
         }
-
-        return pActorElem;
-    }
-
-    TiXmlElement* CreateXmlData_FloorSpike(ActorPrototype proto, const Point& position, const std::string& imagePath, const FloorSpikeDef& def)
-    {
-        TiXmlElement* pActorElem = g_pApp->GetActorPrototypeElem(proto);
-        assert(pActorElem != NULL);
-
-        //----------- Position
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
-            "x", (int)position.x, "y", (int)position.y));
-
-        //----------- ActorRenderComponent
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.ActorRenderComponent.ImagePath", imagePath));
-
-        //----------- AnimationComponent
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.AnimationComponent.SpecialAnimation.FrameDuration", def.cycleDuration));
-
-        // ---------- DamageAuraComponent
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.DamageAuraComponent.Damage", def.damage));
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.DamageAuraComponent.PulseInterval", def.damagePulseInterval));
-
-        // ---------- FloorSpikeComponent
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.FloorSpikeComponent.ActiveFrameIdx", def.activeFrameIdx));
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.FloorSpikeComponent.StartDelay", def.startDelay));
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.FloorSpikeComponent.TimeOn", def.timeOn));
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.FloorSpikeComponent.ActivateSound", def.activateSound));
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.FloorSpikeComponent.DeactivateSound", def.deactivateSound));
 
         return pActorElem;
     }
@@ -2084,17 +2074,17 @@ namespace ActorTemplates
         assert(pActorElem != NULL);
 
         //----------- Position
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
             "x", (int)position.x, "y", (int)position.y));
 
         //----------- ActorRenderComponent
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.ActorRenderComponent.ImagePath", imagePath));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.ActorRenderComponent.ImagePath", imagePath));
 
         //----------- AnimationComponent
 
         // All ropes have 120 animation frames
         int cycleDuration = def.timeToFlayBackAndForth / 120;
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.AnimationComponent.SpecialAnimation.FrameDuration", cycleDuration));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.AnimationComponent.SpecialAnimation.FrameDuration", cycleDuration));
 
         return pActorElem;
     }
@@ -2105,12 +2095,12 @@ namespace ActorTemplates
         assert(pActorElem != NULL);
 
         //----------- Position
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
             "x", (int)position.x, "y", (int)position.y));
 
         //----------- ActorRenderComponent
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.SteppingGroundComponent.TimeOn", def.timeOn));
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.SteppingGroundComponent.TimeOff", def.timeOff));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.SteppingGroundComponent.TimeOn", def.timeOn));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.SteppingGroundComponent.TimeOff", def.timeOff));
 
         return pActorElem;
     }
@@ -2121,50 +2111,50 @@ namespace ActorTemplates
         assert(pActorElem != NULL);
 
         //----------- Position
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
             "x", (int)position.x, "y", (int)position.y));
 
         //----------- SpringBoardComponent
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.SpringBoardComponent.SpringHeight", def.springHeight));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.SpringBoardComponent.SpringHeight", def.springHeight));
 
         return pActorElem;
     }
 
-    StrongActorPtr CreateActor(ActorPrototype proto, Point position)
+    StrongActorPtr CreateActor(ActorPrototype proto, const Point& position)
     {
         return CreateAndReturnActor(CreateXmlData_Actor(proto, position));
     }
 
-    StrongActorPtr CreateActor_Projectile(ActorPrototype proto, Point position, Direction dir, int sourceActorId)
+    StrongActorPtr CreateActor_Projectile(ActorPrototype proto, const Point& position, Direction dir, int sourceActorId)
     {
         return CreateAndReturnActor(CreateXmlData_ProjectileActor(proto, position, dir, sourceActorId));
     }
 
-    StrongActorPtr CreateActor_StaticImage(ActorPrototype proto, Point position, const std::string& imagePath, const AnimationDef& aniDef)
+    StrongActorPtr CreateActor_StaticImage(ActorPrototype proto, const Point& position, const std::string& imagePath, const AnimationDef& aniDef)
     {
         return CreateAndReturnActor(CreateXmlData_StaticImage(proto, position, imagePath, aniDef));
     }
 
-    TiXmlElement* CreateXmlData_LocalAmbientSound(ActorPrototype proto, Point position, const LocalAmbientSoundDef& soundDef)
+    TiXmlElement* CreateXmlData_LocalAmbientSound(ActorPrototype proto, const Point& position, const LocalAmbientSoundDef& soundDef)
     {
         TiXmlElement* pActorElem = g_pApp->GetActorPrototypeElem(proto);
         assert(pActorElem != NULL);
 
         //----------- Position
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.PositionComponent.Position",
             "x", (int)position.x, "y", (int)position.y));
 
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.LocalAmbientSoundComponent.Sound", soundDef.sound));
-        assert(SetTiXmlNodeValue(pActorElem, "Actor.LocalAmbientSoundComponent.Volume", soundDef.volume));
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.LocalAmbientSoundComponent.SoundAreaSize",
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.LocalAmbientSoundComponent.Sound", soundDef.sound));
+        DO_AND_CHECK(SetTiXmlNodeValue(pActorElem, "Actor.LocalAmbientSoundComponent.Volume", soundDef.volume));
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.LocalAmbientSoundComponent.SoundAreaSize",
             "width", (int)soundDef.soundAreaSize.x, "height", (int)soundDef.soundAreaSize.y));
-        assert(SetTiXmlNode2Attribute(pActorElem, "Actor.LocalAmbientSoundComponent.SoundAreaOffset",
+        DO_AND_CHECK(SetTiXmlNode2Attribute(pActorElem, "Actor.LocalAmbientSoundComponent.SoundAreaOffset",
             "x", (int)soundDef.soundAreaOffset.x, "y", (int)soundDef.soundAreaOffset.y));
 
         return pActorElem;
     }
 
-    TiXmlElement* CreateXmlData_EnemyAIActor(std::string imageSet, std::string animationSet, Point position, const std::vector<PickupType>& loot, std::string logicName, int32 zCoord, int32 minPatrolX, int32 maxPatrolX)
+    TiXmlElement* CreateXmlData_EnemyAIActor(const std::string& imageSet, const std::string& animationSet, const Point& position, const std::vector<PickupType>& loot, const std::string& logicName, int32 zCoord, int32 minPatrolX, int32 maxPatrolX)
     {
         assert(false && "This method is deprecated. Use \"CreateXmlData_EnemyAIActor(ActorPrototype enemyType, Point position, const std::vector<PickupType>& loot, int32 minPatrolX, int32 maxPatrolX)\" instead");
 
@@ -2372,7 +2362,7 @@ namespace ActorTemplates
 
         // Add sounds associated to given enemy
         auto soundTypeAndNamePairs = GetSoundsFromActorLogic(logicName);
-        for (std::pair<std::string, std::string> soundTypeAndNamePair : soundTypeAndNamePairs)
+        for (std::pair<std::string, std::string> &soundTypeAndNamePair : soundTypeAndNamePairs)
         {
             XML_ADD_2_PARAM_ELEMENT("Sound", "SoundType", soundTypeAndNamePair.first.c_str(), 
                 "SoundName", soundTypeAndNamePair.second.c_str(), pEnemyAIElem);
@@ -2422,7 +2412,7 @@ namespace ActorTemplates
         return CreateAndReturnActor(pActorElem);
     }
 
-    StrongActorPtr CreateSingleAnimation(Point position, AnimationType animType)
+    StrongActorPtr CreateSingleAnimation(const Point& position, AnimationType animType)
     {
         TiXmlElement* pActorElem = new TiXmlElement("Actor");
 
@@ -2446,6 +2436,11 @@ namespace ActorTemplates
                 pActorElem->LinkEndChild(CreateCycleAnimationComponent(50));
                 break;
 
+            case AnimationType_TridentExplosion:
+                imageSet = "LEVEL_TRIDENT_TRIDENTEXPLOSION";
+                pActorElem->LinkEndChild(CreateCycleAnimationComponent(50));
+                break;
+
             case AnimationType_TarSplash:
                 imageSet = "LEVEL_SPLASH";
                 pActorElem->LinkEndChild(CreateCycleAnimationComponent(75));
@@ -2459,7 +2454,7 @@ namespace ActorTemplates
 
         pActorElem->SetAttribute("Type", imageSet.c_str());
 
-        pActorElem->LinkEndChild(CreateActorRenderComponent(imageSet, 1000));
+        pActorElem->LinkEndChild(CreateActorRenderComponent(imageSet, (int32) zIndexes::SingleAnimation));
 
         TiXmlElement* pSingleAnimComponentElem = new TiXmlElement("SingleAnimationComponent");
         pActorElem->LinkEndChild(pSingleAnimComponentElem);
@@ -2467,7 +2462,7 @@ namespace ActorTemplates
         return CreateAndReturnActor(pActorElem);
     }
 
-    TiXmlElement* CreateXmlData_PickupActor(PickupType pickupType, Point position, bool isStatic, const ParamMap& paramMap)
+    TiXmlElement* CreateXmlData_PickupActor(PickupType pickupType, const Point& position, bool isStatic, const ParamMap& paramMap)
     {
         assert(pickupType >= PickupType_Default && pickupType < PickupType_Max);
 
@@ -2499,18 +2494,18 @@ namespace ActorTemplates
         return pActorXmlData;
     }
 
-    StrongActorPtr CreateActorPickup(PickupType pickupType, Point position, bool isStatic)
+    StrongActorPtr CreateActorPickup(PickupType pickupType, const Point& position, bool isStatic)
     {
         return CreateAndReturnActor(CreateXmlData_PickupActor(pickupType, position, isStatic));
     }
 
-    StrongActorPtr CreateRenderedActor(Point position, std::string imageSet, std::string animPath, int zCoord)
+    StrongActorPtr CreateRenderedActor(const Point& position, const std::string& imageSet, const std::string& animPath, zIndexes zCoord)
     {
         TiXmlElement* pActor = new TiXmlElement("Actor");
         pActor->SetAttribute("Type", imageSet.c_str());
 
         pActor->LinkEndChild(CreatePositionComponent(position.x, position.y));
-        pActor->LinkEndChild(CreateActorRenderComponent(imageSet, zCoord, true, false, false, false));
+        pActor->LinkEndChild(CreateActorRenderComponent(imageSet, (int32) zCoord, true, false, false, false));
         if (!animPath.empty())
         {
             pActor->LinkEndChild(CreateAnimationComponent(animPath, true));
@@ -2524,17 +2519,17 @@ namespace ActorTemplates
         return CreateAndReturnActor(CreateXmlData_PowerupSparkleActor("GAME_SPARKLE", cycleDuration));
     }
 
-    StrongActorPtr CreateClawProjectile(AmmoType ammoType, Direction direction, Point position, int sourceActorId, const Point& initialImpulse)
+    StrongActorPtr CreateClawProjectile(AmmoType ammoType, Direction direction, const Point& position, int sourceActorId, const Point& initialImpulse)
     {
         return CreateAndReturnActor(CreateXmlData_ClawProjectileActor(ammoType, direction, position, sourceActorId, initialImpulse));
     }
 
     StrongActorPtr CreateProjectile(
-        std::string imageSet, 
+        const std::string& imageSet,
         uint32 damage, 
         DamageType damageType, 
         Direction direction, 
-        Point position, 
+        const Point& position,
         CollisionFlag collisionFlag, 
         uint32 collisionMask,
         int sourceActorId)
@@ -2550,17 +2545,17 @@ namespace ActorTemplates
             sourceActorId));
     }
 
-    StrongActorPtr CreateAreaDamage(Point position, Point size, int32 damage, CollisionFlag collisionFlag, std::string shape, DamageType damageType, Direction hitDirection, int sourceActorId, Point positionOffset, std::string imageSet, int32 zCoord)
+    StrongActorPtr CreateAreaDamage(const Point& position, const Point& size, int32 damage, CollisionFlag collisionFlag, const std::string& shape, DamageType damageType, Direction hitDirection, int sourceActorId, const Point& positionOffset, const std::string& imageSet, zIndexes zCoord)
     {
         return CreateAndReturnActor(CreateXmlData_AreaDamageActor(position, size, damage, collisionFlag, shape, damageType, hitDirection, sourceActorId, positionOffset, imageSet, zCoord));
     }
 
-    StrongActorPtr CreateGlitter(std::string glitterType, Point position, int32 zCoord)
+    StrongActorPtr CreateGlitter(const std::string& glitterType, const Point& position, zIndexes zCoord)
     {
         return CreateAndReturnActor(CreateXmlData_GlitterActor(glitterType, position, zCoord));
     }
 
-    StrongActorPtr CreateScorePopupActor(Point position, int score)
+    StrongActorPtr CreateScorePopupActor(const Point& position, int score)
     {
         return CreateAndReturnActor(CreateXmlData_ScorePopupActor(position, score));
     }

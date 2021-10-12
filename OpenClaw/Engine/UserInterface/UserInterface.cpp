@@ -11,103 +11,101 @@
 #include "../Audio/Audio.h"
 
 #include <cctype>
-#include <vector>
 
 int lastJoy = -1;
-int lastButton = -1;
 
 std::map<std::string, MenuPage> g_StringToMenuPageEnumMap =
-{
-    { "MenuPage_Main",                          MenuPage_Main },
-    { "MenuPage_SinglePlayer",                  MenuPage_SinglePlayer },
-    { "MenuPage_Multiplayer",                   MenuPage_Multiplayer },
-    { "MenuPage_ReplayMovies",                  MenuPage_ReplayMovies },
-    { "MenuPage_Options",                       MenuPage_Options },
-    { "MenuPage_Credits",                       MenuPage_Credits },
-    { "MenuPage_Help",                          MenuPage_Help },
-    { "MenuPage_QuitGame",                      MenuPage_QuitGame },
-    { "MenuPage_SinglePlayer_NewGame",          MenuPage_SinglePlayer_NewGame },
-    { "MenuPage_SinglePlayer_LoadGame",         MenuPage_SinglePlayer_LoadGame },
-    { "MenuPage_SinglePlayer_LoadCustomLevel",  MenuPage_SinglePlayer_LoadCustomLevel },
-    { "MenuPage_SinglePlayer_SaveGame",         MenuPage_SinglePlayer_SaveGame },
-    { "MenuPage_SinglePlayer_UploadScores",     MenuPage_SinglePlayer_UploadScores },
-    { "MenuPage_SinglePlayer_LoadGame_Level1",  MenuPage_SinglePlayer_LoadGame_Level1 },
-    { "MenuPage_SinglePlayer_LoadGame_Level2",  MenuPage_SinglePlayer_LoadGame_Level2 },
-    { "MenuPage_SinglePlayer_LoadGame_Level3",  MenuPage_SinglePlayer_LoadGame_Level3 },
-    { "MenuPage_SinglePlayer_LoadGame_Level4",  MenuPage_SinglePlayer_LoadGame_Level4 },
-    { "MenuPage_SinglePlayer_LoadGame_Level5",  MenuPage_SinglePlayer_LoadGame_Level5 },
-    { "MenuPage_SinglePlayer_LoadGame_Level6",  MenuPage_SinglePlayer_LoadGame_Level6 },
-    { "MenuPage_SinglePlayer_LoadGame_Level7",  MenuPage_SinglePlayer_LoadGame_Level7 },
-    { "MenuPage_SinglePlayer_LoadGame_Level8",  MenuPage_SinglePlayer_LoadGame_Level8 },
-    { "MenuPage_SinglePlayer_LoadGame_Level9",  MenuPage_SinglePlayer_LoadGame_Level9 },
-    { "MenuPage_SinglePlayer_LoadGame_Level10", MenuPage_SinglePlayer_LoadGame_Level10 },
-    { "MenuPage_SinglePlayer_LoadGame_Level11", MenuPage_SinglePlayer_LoadGame_Level11 },
-    { "MenuPage_SinglePlayer_LoadGame_Level12", MenuPage_SinglePlayer_LoadGame_Level12 },
-    { "MenuPage_SinglePlayer_LoadGame_Level13", MenuPage_SinglePlayer_LoadGame_Level13 },
-    { "MenuPage_SinglePlayer_LoadGame_Level14", MenuPage_SinglePlayer_LoadGame_Level14 },
-    { "MenuPage_Options_EditPlayers",           MenuPage_Options_EditPlayers },
-    { "MenuPage_Options_Difficulty",            MenuPage_Options_Difficulty },
-    { "MenuPage_Options_Controls",              MenuPage_Options_Controls },
-    { "MenuPage_Options_Display",               MenuPage_Options_Display },
-    { "MenuPage_Options_Audio",                 MenuPage_Options_Audio },
-    { "MenuPage_Multiplayer_LevelRacing",       MenuPage_Multiplayer_LevelRacing },
-    { "MenuPage_Multiplayer_EditMacros",        MenuPage_Multiplayer_EditMacros },
+    {
+        {"MenuPage_Main", MenuPage_Main},
+        {"MenuPage_SinglePlayer", MenuPage_SinglePlayer},
+        {"MenuPage_Multiplayer", MenuPage_Multiplayer},
+        {"MenuPage_ReplayMovies", MenuPage_ReplayMovies},
+        {"MenuPage_Options", MenuPage_Options},
+        {"MenuPage_Credits", MenuPage_Credits},
+        {"MenuPage_Help", MenuPage_Help},
+        {"MenuPage_QuitGame", MenuPage_QuitGame},
+        {"MenuPage_Help_TouchScreen", MenuPage_Help_TouchScreen},
+        {"MenuPage_SinglePlayer_NewGame", MenuPage_SinglePlayer_NewGame},
+        {"MenuPage_SinglePlayer_LoadGame", MenuPage_SinglePlayer_LoadGame},
+        {"MenuPage_SinglePlayer_LoadCustomLevel", MenuPage_SinglePlayer_LoadCustomLevel},
+        {"MenuPage_SinglePlayer_SaveGame", MenuPage_SinglePlayer_SaveGame},
+        {"MenuPage_SinglePlayer_UploadScores", MenuPage_SinglePlayer_UploadScores},
+        {"MenuPage_SinglePlayer_LoadGame_Level1", MenuPage_SinglePlayer_LoadGame_Level1},
+        {"MenuPage_SinglePlayer_LoadGame_Level2", MenuPage_SinglePlayer_LoadGame_Level2},
+        {"MenuPage_SinglePlayer_LoadGame_Level3", MenuPage_SinglePlayer_LoadGame_Level3},
+        {"MenuPage_SinglePlayer_LoadGame_Level4", MenuPage_SinglePlayer_LoadGame_Level4},
+        {"MenuPage_SinglePlayer_LoadGame_Level5", MenuPage_SinglePlayer_LoadGame_Level5},
+        {"MenuPage_SinglePlayer_LoadGame_Level6", MenuPage_SinglePlayer_LoadGame_Level6},
+        {"MenuPage_SinglePlayer_LoadGame_Level7", MenuPage_SinglePlayer_LoadGame_Level7},
+        {"MenuPage_SinglePlayer_LoadGame_Level8", MenuPage_SinglePlayer_LoadGame_Level8},
+        {"MenuPage_SinglePlayer_LoadGame_Level9", MenuPage_SinglePlayer_LoadGame_Level9},
+        {"MenuPage_SinglePlayer_LoadGame_Level10", MenuPage_SinglePlayer_LoadGame_Level10},
+        {"MenuPage_SinglePlayer_LoadGame_Level11", MenuPage_SinglePlayer_LoadGame_Level11},
+        {"MenuPage_SinglePlayer_LoadGame_Level12", MenuPage_SinglePlayer_LoadGame_Level12},
+        {"MenuPage_SinglePlayer_LoadGame_Level13", MenuPage_SinglePlayer_LoadGame_Level13},
+        {"MenuPage_SinglePlayer_LoadGame_Level14", MenuPage_SinglePlayer_LoadGame_Level14},
+        {"MenuPage_Options_EditPlayers", MenuPage_Options_EditPlayers},
+        {"MenuPage_Options_Difficulty", MenuPage_Options_Difficulty},
+        {"MenuPage_Options_Controls", MenuPage_Options_Controls},
+        {"MenuPage_Options_Display", MenuPage_Options_Display},
+        {"MenuPage_Options_Audio", MenuPage_Options_Audio},
+        {"MenuPage_Multiplayer_LevelRacing", MenuPage_Multiplayer_LevelRacing},
+        {"MenuPage_Multiplayer_EditMacros", MenuPage_Multiplayer_EditMacros},
 
-    // Ingame menu
-    { "MenuPage_EndGame",                       MenuPage_EndGame },
-    { "MenuPage_EndLife",                       MenuPage_EndLife }
-};
+        // Ingame menu
+        {"MenuPage_EndGame", MenuPage_EndGame},
+        {"MenuPage_EndLife", MenuPage_EndLife}};
 
 std::map<std::string, SDL_Scancode> g_StringToSDLKeyCodeMap =
-{
-    { "Escape", SDL_SCANCODE_ESCAPE },
-    { "Space",  SDL_SCANCODE_SPACE },
-    { "Enter",  SDL_SCANCODE_RETURN },
-    { "A", SDL_SCANCODE_A },
-    { "B", SDL_SCANCODE_B },
-    { "C", SDL_SCANCODE_C },
-    { "D", SDL_SCANCODE_D },
-    { "E", SDL_SCANCODE_E },
-    { "F", SDL_SCANCODE_F },
-    { "G", SDL_SCANCODE_G },
-    { "H", SDL_SCANCODE_H },
-    { "I", SDL_SCANCODE_I },
-    { "J", SDL_SCANCODE_J },
-    { "K", SDL_SCANCODE_K },
-    { "L", SDL_SCANCODE_L },
-    { "M", SDL_SCANCODE_M },
-    { "N", SDL_SCANCODE_N },
-    { "O", SDL_SCANCODE_O },
-    { "P", SDL_SCANCODE_P },
-    { "Q", SDL_SCANCODE_Q },
-    { "R", SDL_SCANCODE_R },
-    { "S", SDL_SCANCODE_S },
-    { "T", SDL_SCANCODE_T },
-    { "U", SDL_SCANCODE_U },
-    { "V", SDL_SCANCODE_V },
-    { "W", SDL_SCANCODE_W },
-    { "X", SDL_SCANCODE_X },
-    { "Y", SDL_SCANCODE_Y },
-    { "Z", SDL_SCANCODE_Z },
-    { "0", SDL_SCANCODE_0 },
-    { "1", SDL_SCANCODE_1 },
-    { "2", SDL_SCANCODE_2 },
-    { "3", SDL_SCANCODE_3 },
-    { "4", SDL_SCANCODE_4 },
-    { "5", SDL_SCANCODE_5 },
-    { "6", SDL_SCANCODE_6 },
-    { "7", SDL_SCANCODE_7 },
-    { "8", SDL_SCANCODE_8 },
-    { "LeftArrow", SDL_SCANCODE_LEFT },
-    { "RightArrow", SDL_SCANCODE_RIGHT },
+    {
+        {"Escape", SDL_SCANCODE_ESCAPE},
+        {"Space", SDL_SCANCODE_SPACE},
+        {"Enter", SDL_SCANCODE_RETURN},
+        {"A", SDL_SCANCODE_A},
+        {"B", SDL_SCANCODE_B},
+        {"C", SDL_SCANCODE_C},
+        {"D", SDL_SCANCODE_D},
+        {"E", SDL_SCANCODE_E},
+        {"F", SDL_SCANCODE_F},
+        {"G", SDL_SCANCODE_G},
+        {"H", SDL_SCANCODE_H},
+        {"I", SDL_SCANCODE_I},
+        {"J", SDL_SCANCODE_J},
+        {"K", SDL_SCANCODE_K},
+        {"L", SDL_SCANCODE_L},
+        {"M", SDL_SCANCODE_M},
+        {"N", SDL_SCANCODE_N},
+        {"O", SDL_SCANCODE_O},
+        {"P", SDL_SCANCODE_P},
+        {"Q", SDL_SCANCODE_Q},
+        {"R", SDL_SCANCODE_R},
+        {"S", SDL_SCANCODE_S},
+        {"T", SDL_SCANCODE_T},
+        {"U", SDL_SCANCODE_U},
+        {"V", SDL_SCANCODE_V},
+        {"W", SDL_SCANCODE_W},
+        {"X", SDL_SCANCODE_X},
+        {"Y", SDL_SCANCODE_Y},
+        {"Z", SDL_SCANCODE_Z},
+        {"0", SDL_SCANCODE_0},
+        {"1", SDL_SCANCODE_1},
+        {"2", SDL_SCANCODE_2},
+        {"3", SDL_SCANCODE_3},
+        {"4", SDL_SCANCODE_4},
+        {"5", SDL_SCANCODE_5},
+        {"6", SDL_SCANCODE_6},
+        {"7", SDL_SCANCODE_7},
+        {"8", SDL_SCANCODE_8},
+        {"LeftArrow", SDL_SCANCODE_LEFT},
+        {"RightArrow", SDL_SCANCODE_RIGHT},
 };
 
 std::map<std::string, MenuItemType> g_StringToMenuItemType =
-{
-    { "Text",       MenuItemType_Text },
-    { "Button",     MenuItemType_Button },
-    { "Slider",     MenuItemType_Slider },
-    { "Image",      MenuItemType_Image },
+    {
+        {"Text", MenuItemType_Text},
+        {"Button", MenuItemType_Button},
+        {"Slider", MenuItemType_Slider},
+        {"Image", MenuItemType_Image},
 };
 
 static SDL_Rect GetScreenRect()
@@ -117,10 +115,10 @@ static SDL_Rect GetScreenRect()
     int targetWidth = (int)(windowSize.x / scale.x);
     int targetHeight = (int)(windowSize.y / scale.y);
 
-    return { 0, 0, targetWidth, targetHeight };
+    return {0, 0, targetWidth, targetHeight};
 }
 
-static shared_ptr<Image> TryLoadPcxImageFromXmlElement(TiXmlElement* pElem)
+static shared_ptr<Image> TryLoadPcxImageFromXmlElement(TiXmlElement *pElem)
 {
     if (pElem == NULL)
     {
@@ -131,10 +129,10 @@ static shared_ptr<Image> TryLoadPcxImageFromXmlElement(TiXmlElement* pElem)
     // This should not happen
     assert(!imagePath.empty());
 
-    return PcxResourceLoader::LoadAndReturnImage(imagePath.c_str(), true, { 0, 0, 0, 0 });
+    return PcxResourceLoader::LoadAndReturnImage(imagePath.c_str(), true, {0, 0, 0, 0});
 }
 
-static shared_ptr<Image> LoadImageFromXmlElement(TiXmlElement* pElem)
+static shared_ptr<Image> LoadImageFromXmlElement(TiXmlElement *pElem)
 {
     if (pElem == NULL)
     {
@@ -149,7 +147,7 @@ static shared_ptr<Image> LoadImageFromXmlElement(TiXmlElement* pElem)
     }
 
     // Transform to lowercase to support all naming conventions
-    std::transform(imagePath.begin(), imagePath.end(), imagePath.begin(), (int(*)(int)) std::tolower);
+    std::transform(imagePath.begin(), imagePath.end(), imagePath.begin(), (int (*)(int))std::tolower);
 
     // We are ASSUMING here that all PCXs are from original CLAW.REZ archive
     // For our own purpose we will use PNGs or JPEGs
@@ -157,7 +155,7 @@ static shared_ptr<Image> LoadImageFromXmlElement(TiXmlElement* pElem)
     shared_ptr<Image> pImage;
     if (extension == ".pcx")
     {
-        pImage = PcxResourceLoader::LoadAndReturnImage(imagePath.c_str(), true, { 0, 0, 0, 0 });
+        pImage = PcxResourceLoader::LoadAndReturnImage(imagePath.c_str(), true, {0, 0, 0, 0});
     }
     else if (extension == ".png")
     {
@@ -179,7 +177,7 @@ static shared_ptr<Image> LoadImageFromXmlElement(TiXmlElement* pElem)
     return pImage;
 }
 
-static MenuItemType StringToMenuItemTypeEnum(const std::string& str)
+static MenuItemType StringToMenuItemTypeEnum(const std::string &str)
 {
     if (str == "Text")
     {
@@ -193,14 +191,14 @@ static MenuItemType StringToMenuItemTypeEnum(const std::string& str)
     {
         return MenuItemType_Slider;
     }
-    
+
     LOG_ERROR("Conflicting string: " + str);
     assert(false && "Unknown menu item type string");
 
     return MenuItemType_None;
 }
 
-static MenuPage StringToMenuPageEnum(const std::string& str)
+static MenuPage StringToMenuPageEnum(const std::string &str)
 {
     auto findIt = g_StringToMenuPageEnumMap.find(str);
     if (findIt == g_StringToMenuPageEnumMap.end())
@@ -212,7 +210,7 @@ static MenuPage StringToMenuPageEnum(const std::string& str)
     return findIt->second;
 }
 
-static SDL_Scancode StringToSDLKeycode(const std::string& str)
+static SDL_Scancode StringToSDLKeycode(const std::string &str)
 {
     auto findIt = g_StringToSDLKeyCodeMap.find(str);
     if (findIt == g_StringToSDLKeyCodeMap.end())
@@ -224,7 +222,7 @@ static SDL_Scancode StringToSDLKeycode(const std::string& str)
     return findIt->second;
 }
 
-static MenuItemState StringToMenuItemStateEnum(const std::string& str)
+static MenuItemState StringToMenuItemStateEnum(const std::string &str)
 {
     if (str == "Active")
     {
@@ -245,7 +243,7 @@ static MenuItemState StringToMenuItemStateEnum(const std::string& str)
     return MenuItemState_None;
 }
 
-static MenuItemType StringToMenuItemType(const std::string& str)
+static MenuItemType StringToMenuItemType(const std::string &str)
 {
     auto findIt = g_StringToMenuItemType.find(str);
     if (findIt == g_StringToMenuItemType.end())
@@ -257,7 +255,7 @@ static MenuItemType StringToMenuItemType(const std::string& str)
     return findIt->second;
 }
 
-static IEventDataPtr XmlElemToGeneratedEvent(TiXmlElement* pElem)
+static IEventDataPtr XmlElemToGeneratedEvent(TiXmlElement *pElem)
 {
     if (pElem == NULL)
     {
@@ -378,18 +376,20 @@ Point g_MenuScale = Point(1.0, 1.0);
 //
 //-----------------------------------------------------------------------------
 
-ScreenElementMenu::ScreenElementMenu(SDL_Renderer* pRenderer)
-    :
-    m_pRenderer(pRenderer),
-    m_bIsVisible(true),
-    m_MenuType(MenuType_None)
+ScreenElementMenu::ScreenElementMenu(SDL_Renderer *pRenderer)
+    : m_pRenderer(pRenderer),
+      m_bIsVisible(true),
+      m_MenuType(MenuType_None)
 {
     IEventMgr::Get()->VAddListener(MakeDelegate(
-        this, &ScreenElementMenu::SwitchPageDelegate), EventData_Menu_SwitchPage::sk_EventType);
+                                       this, &ScreenElementMenu::SwitchPageDelegate),
+                                   EventData_Menu_SwitchPage::sk_EventType);
     IEventMgr::Get()->VAddListener(MakeDelegate(
-        this, &ScreenElementMenu::ModifyMenuItemVisibilityDelegate), EventData_Menu_Modifiy_Item_Visibility::sk_EventType);
+                                       this, &ScreenElementMenu::ModifyMenuItemVisibilityDelegate),
+                                   EventData_Menu_Modifiy_Item_Visibility::sk_EventType);
     IEventMgr::Get()->VAddListener(MakeDelegate(
-        this, &ScreenElementMenu::ModifyMenuItemStateDelegate), EventData_Menu_Modify_Item_State::sk_EventType);
+                                       this, &ScreenElementMenu::ModifyMenuItemStateDelegate),
+                                   EventData_Menu_Modify_Item_State::sk_EventType);
 }
 
 ScreenElementMenu::~ScreenElementMenu()
@@ -397,20 +397,26 @@ ScreenElementMenu::~ScreenElementMenu()
     m_MenuPageMap.clear();
 
     IEventMgr::Get()->VRemoveListener(MakeDelegate(
-        this, &ScreenElementMenu::SwitchPageDelegate), EventData_Menu_SwitchPage::sk_EventType);
+                                          this, &ScreenElementMenu::SwitchPageDelegate),
+                                      EventData_Menu_SwitchPage::sk_EventType);
     IEventMgr::Get()->VRemoveListener(MakeDelegate(
-        this, &ScreenElementMenu::ModifyMenuItemVisibilityDelegate), EventData_Menu_Modifiy_Item_Visibility::sk_EventType);
+                                          this, &ScreenElementMenu::ModifyMenuItemVisibilityDelegate),
+                                      EventData_Menu_Modifiy_Item_Visibility::sk_EventType);
     IEventMgr::Get()->VRemoveListener(MakeDelegate(
-        this, &ScreenElementMenu::ModifyMenuItemStateDelegate), EventData_Menu_Modify_Item_State::sk_EventType);
+                                          this, &ScreenElementMenu::ModifyMenuItemStateDelegate),
+                                      EventData_Menu_Modify_Item_State::sk_EventType);
 
     if (m_MenuType == MenuType_IngameMenu)
     {
         IEventMgr::Get()->VRemoveListener(MakeDelegate(
-            this, &ScreenElementMenu::IngameMenuResumeGameDelegate), EventData_IngameMenu_Resume_Game::sk_EventType);
+                                              this, &ScreenElementMenu::IngameMenuResumeGameDelegate),
+                                          EventData_IngameMenu_Resume_Game::sk_EventType);
         IEventMgr::Get()->VRemoveListener(MakeDelegate(
-            this, &ScreenElementMenu::IngameMenuEndLifeDelegate), EventData_IngameMenu_End_Life::sk_EventType);
+                                              this, &ScreenElementMenu::IngameMenuEndLifeDelegate),
+                                          EventData_IngameMenu_End_Life::sk_EventType);
         IEventMgr::Get()->VRemoveListener(MakeDelegate(
-            this, &ScreenElementMenu::IngameMenuEndGameDelegate), EventData_IngameMenu_End_Game::sk_EventType);
+                                              this, &ScreenElementMenu::IngameMenuEndGameDelegate),
+                                          EventData_IngameMenu_End_Game::sk_EventType);
     }
 }
 
@@ -447,7 +453,7 @@ void ScreenElementMenu::VOnRender(uint32 msDiff)
     SDL_RenderSetScale(m_pRenderer, (float)scale.x, (float)scale.y);
 }
 
-bool ScreenElementMenu::VOnEvent(SDL_Event& evt)
+bool ScreenElementMenu::VOnEvent(SDL_Event &evt)
 {
     return m_pActiveMenuPage->VOnEvent(evt);
 }
@@ -489,12 +495,12 @@ void ScreenElementMenu::VSetVisible(bool visible)
     m_bIsVisible = visible;
 }
 
-bool ScreenElementMenu::Initialize(TiXmlElement* pElem)
+bool ScreenElementMenu::Initialize(TiXmlElement *pElem)
 {
     assert(m_pRenderer != NULL);
 
     std::string menuTypeStr;
-    assert(ParseValueFromXmlElem(&menuTypeStr, pElem->FirstChildElement("MenuType")));
+    DO_AND_CHECK(ParseValueFromXmlElem(&menuTypeStr, pElem->FirstChildElement("MenuType")));
     if (menuTypeStr == "MenuType_MainMenu")
     {
         m_MenuType = MenuType_MainMenu;
@@ -503,17 +509,20 @@ bool ScreenElementMenu::Initialize(TiXmlElement* pElem)
     {
         m_MenuType = MenuType_IngameMenu;
     }
-    
+
     assert(m_MenuType != MenuType_None);
 
     if (m_MenuType == MenuType_IngameMenu)
     {
         IEventMgr::Get()->VAddListener(MakeDelegate(
-            this, &ScreenElementMenu::IngameMenuResumeGameDelegate), EventData_IngameMenu_Resume_Game::sk_EventType);
+                                           this, &ScreenElementMenu::IngameMenuResumeGameDelegate),
+                                       EventData_IngameMenu_Resume_Game::sk_EventType);
         IEventMgr::Get()->VAddListener(MakeDelegate(
-            this, &ScreenElementMenu::IngameMenuEndLifeDelegate), EventData_IngameMenu_End_Life::sk_EventType);
+                                           this, &ScreenElementMenu::IngameMenuEndLifeDelegate),
+                                       EventData_IngameMenu_End_Life::sk_EventType);
         IEventMgr::Get()->VAddListener(MakeDelegate(
-            this, &ScreenElementMenu::IngameMenuEndGameDelegate), EventData_IngameMenu_End_Game::sk_EventType);
+                                           this, &ScreenElementMenu::IngameMenuEndGameDelegate),
+                                       EventData_IngameMenu_End_Game::sk_EventType);
     }
 
     std::string defaultMenuPageName;
@@ -558,9 +567,9 @@ bool ScreenElementMenu::Initialize(TiXmlElement* pElem)
     ParseValueFromXmlElem(&m_MenuEnterSound, pElem->FirstChildElement("MenuEnterSound"));
 
     // Load all menu pages
-    for (TiXmlElement* pMenuPageElem = pElem->FirstChildElement("MenuPage");
-        pMenuPageElem != NULL;
-        pMenuPageElem = pMenuPageElem->NextSiblingElement("MenuPage"))
+    for (TiXmlElement *pMenuPageElem = pElem->FirstChildElement("MenuPage");
+         pMenuPageElem != NULL;
+         pMenuPageElem = pMenuPageElem->NextSiblingElement("MenuPage"))
     {
         std::string pageName;
         ParseValueFromXmlElem(&pageName, pMenuPageElem->FirstChildElement("PageName"));
@@ -590,7 +599,7 @@ bool ScreenElementMenu::Initialize(TiXmlElement* pElem)
 
 void ScreenElementMenu::SwitchPageDelegate(IEventDataPtr pEventData)
 {
-    shared_ptr<EventData_Menu_SwitchPage> pCastEventData = 
+    shared_ptr<EventData_Menu_SwitchPage> pCastEventData =
         static_pointer_cast<EventData_Menu_SwitchPage>(pEventData);
 
     MenuPage pageType = StringToMenuPageEnum(pCastEventData->GetNewPageName());
@@ -664,12 +673,10 @@ void ScreenElementMenu::IngameMenuEndGameDelegate(IEventDataPtr pEventData)
 //
 //-----------------------------------------------------------------------------
 
-ScreenElementMenuPage::ScreenElementMenuPage(SDL_Renderer* pRenderer)
-    :
-    m_pBackground(NULL),
-    m_pRenderer(pRenderer)
+ScreenElementMenuPage::ScreenElementMenuPage(SDL_Renderer *pRenderer)
+    : m_pBackground(NULL),
+      m_pRenderer(pRenderer)
 {
-
 }
 
 ScreenElementMenuPage::~ScreenElementMenuPage()
@@ -704,7 +711,7 @@ void ScreenElementMenuPage::VOnRender(uint32 msDiff)
     }
 }
 
-bool ScreenElementMenuPage::VOnEvent(SDL_Event& evt)
+bool ScreenElementMenuPage::VOnEvent(SDL_Event &evt)
 {
     int activeMenuItemIdx = GetActiveMenuItemIdx();
     if (m_MenuItems.size() > 0)
@@ -735,7 +742,7 @@ bool ScreenElementMenuPage::VOnEvent(SDL_Event& evt)
         {
             // HACK:
             if (keyCode == SDL_SCANCODE_ESCAPE ||
-                keyCode == SDL_SCANCODE_SPACE || 
+                keyCode == SDL_SCANCODE_SPACE ||
                 keyCode == SDL_SCANCODE_RETURN)
             {
                 SoundInfo soundInfo(SOUND_MENU_SELECT_MENU_ITEM);
@@ -773,12 +780,10 @@ bool ScreenElementMenuPage::VOnEvent(SDL_Event& evt)
             clickRect.w = 1;
             clickRect.h = 1;
 
-            SDL_Rect dummy;
-            //
             for (shared_ptr<ScreenElementMenuItem> pMenuItem : m_MenuItems)
             {
                 SDL_Rect itemRect = pMenuItem->GetMenuItemRect();
-                if (SDL_IntersectRect(&clickRect, &itemRect, &dummy))
+                if (SDL_HasIntersection(&clickRect, &itemRect))
                 {
                     if (pMenuItem->CanBeFocused())
                     {
@@ -790,39 +795,30 @@ bool ScreenElementMenuPage::VOnEvent(SDL_Event& evt)
             }
         }
     }
-	else if (evt.type == SDL_JOYAXISMOTION)
+    else if (evt.type == SDL_JOYAXISMOTION)
     {
         if (evt.jaxis.axis == 1)
         {
-            if (evt.jaxis.value < -16383)
+            if (evt.jaxis.value < 0)
             {
-				if(lastJoy == JOY_DOWN) {
-					return;
-				}
-				lastJoy = JOY_DOWN;
                 MoveToMenuItemIdx(activeMenuItemIdx, -1);
                 return true;
             }
-            else if (evt.jaxis.value > 16383)
+            else if (evt.jaxis.value > 0)
             {
-				if(lastJoy == JOY_UP) {
-					return;
-				}
-				lastJoy = JOY_UP;
                 MoveToMenuItemIdx(activeMenuItemIdx, 1);
                 return true;
-            } else if (evt.jaxis.value < 1000 && evt.jaxis.value > -1000) {
-				lastJoy = -1;
-			}
+            }
         }
     }
     else if (evt.type == SDL_JOYBUTTONDOWN)
     {
-		int keyCode = evt.jbutton.button;
-		if(lastButton == keyCode) {
-			return;
-		}
-		lastButton = keyCode;
+        int keyCode = evt.jbutton.button;
+        if (lastJoy == keyCode)
+        {
+            return;
+        }
+        lastJoy = keyCode;
 
         if (keyCode == JOY_DOWN)
         {
@@ -848,7 +844,6 @@ bool ScreenElementMenuPage::VOnEvent(SDL_Event& evt)
             {
                 LOG_WARNING("Could not find any active menu item !");
             }
-
         }
         else if (evt.jbutton.button == 1)
         {
@@ -859,10 +854,10 @@ bool ScreenElementMenuPage::VOnEvent(SDL_Event& evt)
             IEventMgr::Get()->VQueueEvent(m_KeyToEventMap[SDL_SCANCODE_ESCAPE]);
         }
     }
-	else if (evt.type == SDL_JOYBUTTONUP)
+    else if (evt.type == SDL_JOYBUTTONUP)
     {
-		lastButton = -1;
-	}
+        lastJoy = -1;
+    }
 
     for (shared_ptr<ScreenElementMenuItem> pMenuItem : m_MenuItems)
     {
@@ -875,7 +870,7 @@ bool ScreenElementMenuPage::VOnEvent(SDL_Event& evt)
     return false;
 }
 
-bool ScreenElementMenuPage::Initialize(TiXmlElement* pElem)
+bool ScreenElementMenuPage::Initialize(TiXmlElement *pElem)
 {
     std::string pageName;
     ParseValueFromXmlElem(&pageName, pElem->FirstChildElement("PageName"));
@@ -885,9 +880,9 @@ bool ScreenElementMenuPage::Initialize(TiXmlElement* pElem)
     m_pBackground = LoadImageFromXmlElement(pElem->FirstChildElement("BackgroundImage"));
 
     // Load all menu items
-    for (TiXmlElement* pMenuItemElem = pElem->FirstChildElement("MenuItem");
-        pMenuItemElem != NULL;
-        pMenuItemElem = pMenuItemElem->NextSiblingElement("MenuItem"))
+    for (TiXmlElement *pMenuItemElem = pElem->FirstChildElement("MenuItem");
+         pMenuItemElem != NULL;
+         pMenuItemElem = pMenuItemElem->NextSiblingElement("MenuItem"))
     {
         shared_ptr<ScreenElementMenuItem> pItem(new ScreenElementMenuItem(m_pRenderer));
         if (!pItem->Initialize(pMenuItemElem))
@@ -900,12 +895,12 @@ bool ScreenElementMenuPage::Initialize(TiXmlElement* pElem)
     }
 
     // Load all key events
-    for (TiXmlElement* pKeyboardEvent = pElem->FirstChildElement("KeyboardEvent");
-        pKeyboardEvent != NULL;
-        pKeyboardEvent = pKeyboardEvent->NextSiblingElement("KeyboardEvent"))
+    for (TiXmlElement *pKeyboardEvent = pElem->FirstChildElement("KeyboardEvent");
+         pKeyboardEvent != NULL;
+         pKeyboardEvent = pKeyboardEvent->NextSiblingElement("KeyboardEvent"))
     {
         std::string keyStr;
-        assert(ParseValueFromXmlElem(&keyStr, pKeyboardEvent->FirstChildElement("KeyType")));
+        DO_AND_CHECK(ParseValueFromXmlElem(&keyStr, pKeyboardEvent->FirstChildElement("KeyType")));
 
         auto findIt = g_StringToSDLKeyCodeMap.find(keyStr);
         if (findIt == g_StringToSDLKeyCodeMap.end())
@@ -914,7 +909,7 @@ bool ScreenElementMenuPage::Initialize(TiXmlElement* pElem)
             return false;
         }
 
-        IEventDataPtr pGeneratedEvent = 
+        IEventDataPtr pGeneratedEvent =
             XmlElemToGeneratedEvent(pKeyboardEvent->FirstChildElement("GeneratedEvent"));
         if (pGeneratedEvent == nullptr)
         {
@@ -1040,19 +1035,16 @@ shared_ptr<ScreenElementMenuItem> ScreenElementMenuPage::FindMenuItemByName(std:
 //
 //-----------------------------------------------------------------------------
 
-ScreenElementMenuItem::ScreenElementMenuItem(SDL_Renderer* pRenderer)
-    :
-    m_pRenderer(pRenderer),
-    m_State(MenuItemState_None),
-    m_Hotkey(SDL_SCANCODE_UNKNOWN),
-    m_bVisible(true)
+ScreenElementMenuItem::ScreenElementMenuItem(SDL_Renderer *pRenderer)
+    : m_pRenderer(pRenderer),
+      m_State(MenuItemState_None),
+      m_Hotkey(SDL_SCANCODE_UNKNOWN),
+      m_bVisible(true)
 {
-
 }
 
 ScreenElementMenuItem::~ScreenElementMenuItem()
 {
-
 }
 
 void ScreenElementMenuItem::VOnUpdate(uint32 msDiff)
@@ -1088,9 +1080,9 @@ void ScreenElementMenuItem::VOnRender(uint32 msDiff)
     SDL_RenderCopy(m_pRenderer, pCurrImage->GetTexture(), NULL, &renderRect);
 }
 
-bool ScreenElementMenuItem::VOnEvent(SDL_Event& evt)
+bool ScreenElementMenuItem::VOnEvent(SDL_Event &evt)
 {
-    if (evt.type == SDL_KEYDOWN && 
+    if (evt.type == SDL_KEYDOWN &&
         SDL_GetScancodeFromKey(evt.key.keysym.sym) == m_Hotkey &&
         m_bVisible)
     {
@@ -1118,7 +1110,7 @@ bool ScreenElementMenuItem::VOnEvent(SDL_Event& evt)
     return false;
 }
 
-bool ScreenElementMenuItem::Initialize(TiXmlElement* pElem)
+bool ScreenElementMenuItem::Initialize(TiXmlElement *pElem)
 {
     SetPointIfDefined(&m_Position, pElem->FirstChildElement("Position"), "x", "y");
     SetPointIfDefined(&m_DefaultPosition, pElem->FirstChildElement("Position"), "x", "y");
@@ -1132,7 +1124,7 @@ bool ScreenElementMenuItem::Initialize(TiXmlElement* pElem)
     }
     m_State = StringToMenuItemStateEnum(menuItemStateStr);
 
-    if (TiXmlElement* pStateConditionElem = pElem->FirstChildElement("StateCondition"))
+    if (TiXmlElement *pStateConditionElem = pElem->FirstChildElement("StateCondition"))
     {
         std::string conditionForStateStr, conditionTypeStr;
         ParseValueFromXmlElem(&conditionForStateStr, pStateConditionElem->FirstChildElement("ConditionForState"));
@@ -1153,11 +1145,11 @@ bool ScreenElementMenuItem::Initialize(TiXmlElement* pElem)
         }
     }
 
-    if (TiXmlElement* pVisibilityConditionElem = pElem->FirstChildElement("VisibilityCondition"))
+    if (TiXmlElement *pVisibilityConditionElem = pElem->FirstChildElement("VisibilityCondition"))
     {
         std::string conditionTypeStr;
         ParseValueFromXmlElem(&conditionTypeStr, pVisibilityConditionElem->FirstChildElement("ConditionType"));
-        
+
         // This element is visible only when certain condition is met
         // so it is safe to assume it is not visible by default
         m_bVisible = false;
@@ -1253,7 +1245,7 @@ bool ScreenElementMenuItem::Initialize(TiXmlElement* pElem)
         m_Hotkey = StringToSDLKeycode(hotkeyStr);
     }
 
-    for (TiXmlElement* pGeneratedEventElem = pElem->FirstChildElement("GeneratedEvent");
+    for (TiXmlElement *pGeneratedEventElem = pElem->FirstChildElement("GeneratedEvent");
          pGeneratedEventElem != NULL;
          pGeneratedEventElem = pGeneratedEventElem->NextSiblingElement("GeneratedEvent"))
     {
@@ -1266,11 +1258,11 @@ bool ScreenElementMenuItem::Initialize(TiXmlElement* pElem)
         m_GeneratedEventList.push_back(pEvent);
     }
 
-    if (TiXmlElement* pStateEnterEventsElem = pElem->FirstChildElement("StateEnterEvents"))
+    if (TiXmlElement *pStateEnterEventsElem = pElem->FirstChildElement("StateEnterEvents"))
     {
-        for (TiXmlElement* pEventElem = pStateEnterEventsElem->FirstChildElement("Event");
-            pEventElem != NULL;
-            pEventElem = pEventElem->NextSiblingElement("Event"))
+        for (TiXmlElement *pEventElem = pStateEnterEventsElem->FirstChildElement("Event");
+             pEventElem != NULL;
+             pEventElem = pEventElem->NextSiblingElement("Event"))
         {
             std::string forStateStr;
             if (!ParseValueFromXmlElem(&forStateStr, pEventElem->FirstChildElement("ForState")))
@@ -1286,16 +1278,16 @@ bool ScreenElementMenuItem::Initialize(TiXmlElement* pElem)
                 LOG_ERROR("Failed to create generated event for menu item: " + m_Name);
                 return false;
             }
-            
+
             m_StateEnterEventMap[forState].push_back(pEvent);
         }
     }
 
-    if (TiXmlElement* pStateEnterEventsElem = pElem->FirstChildElement("StateLeaveEvents"))
+    if (TiXmlElement *pStateEnterEventsElem = pElem->FirstChildElement("StateLeaveEvents"))
     {
-        for (TiXmlElement* pEventElem = pStateEnterEventsElem->FirstChildElement("Event");
-            pEventElem != NULL;
-            pEventElem = pEventElem->NextSiblingElement("Event"))
+        for (TiXmlElement *pEventElem = pStateEnterEventsElem->FirstChildElement("Event");
+             pEventElem != NULL;
+             pEventElem = pEventElem->NextSiblingElement("Event"))
         {
             std::string forStateStr;
             if (!ParseValueFromXmlElem(&forStateStr, pEventElem->FirstChildElement("ForState")))
@@ -1316,11 +1308,11 @@ bool ScreenElementMenuItem::Initialize(TiXmlElement* pElem)
         }
     }
 
-    if (TiXmlElement* pKeyAllKeyEventsElem = pElem->FirstChildElement("KeyEvents"))
+    if (TiXmlElement *pKeyAllKeyEventsElem = pElem->FirstChildElement("KeyEvents"))
     {
-        for (TiXmlElement* pKeyEventElem = pKeyAllKeyEventsElem->FirstChildElement("KeyEvent");
-            pKeyEventElem != NULL;
-            pKeyEventElem = pKeyEventElem->NextSiblingElement("KeyEvent"))
+        for (TiXmlElement *pKeyEventElem = pKeyAllKeyEventsElem->FirstChildElement("KeyEvent");
+             pKeyEventElem != NULL;
+             pKeyEventElem = pKeyEventElem->NextSiblingElement("KeyEvent"))
         {
             std::string keyStr;
             if (!ParseValueFromXmlElem(&keyStr, pKeyEventElem->FirstChildElement("Key")))
@@ -1330,9 +1322,9 @@ bool ScreenElementMenuItem::Initialize(TiXmlElement* pElem)
             }
             SDL_Scancode keyCode = StringToSDLKeycode(keyStr);
 
-            for (TiXmlElement* pEventElem = pKeyEventElem->FirstChildElement("Event");
-                pEventElem != NULL;
-                pEventElem = pEventElem->NextSiblingElement("Event"))
+            for (TiXmlElement *pEventElem = pKeyEventElem->FirstChildElement("Event");
+                 pEventElem != NULL;
+                 pEventElem = pEventElem->NextSiblingElement("Event"))
             {
                 IEventDataPtr pEvent = XmlElemToGeneratedEvent(pEventElem);
                 if (pEvent == nullptr)
@@ -1370,7 +1362,7 @@ bool ScreenElementMenuItem::Press()
         {
             IEventMgr::Get()->VQueueEvent(pEvent);
         }
-        
+
         SoundInfo soundInfo(SOUND_MENU_SELECT_MENU_ITEM);
         IEventMgr::Get()->VTriggerEvent(IEventDataPtr(
             new EventData_Request_Play_Sound(soundInfo)));

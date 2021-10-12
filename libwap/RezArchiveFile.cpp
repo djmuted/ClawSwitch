@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <string.h>
 #include <stdint.h>
-#include <switch.h>
+#include <mutex>
 #include <map>
 #include <string>
 #include <string.h>
@@ -22,10 +22,7 @@ struct RezArchiveFileEntry
 {
     RezArchive* rezArchive;
     std::ifstream* fileStream;
-	Mutex switchMutex;
-	RezArchiveFileEntry() {
-		mutexInit(&this->switchMutex);
-	}
+    std::mutex mutex;
 };
 
 /*************************************************************************/
@@ -140,13 +137,11 @@ char* WAP_GetRezFileData(RezFile* rezFile)
 
         RezArchiveFileEntry* rezArchiveFileEntry = g_rezArchiveFileEntryMap[rezFile->owner];
 
-        //std::lock_guard<std::mutex> lock(rezArchiveFileEntry->mutex);
-		
-		mutexLock(&rezArchiveFileEntry->switchMutex);
+        std::lock_guard<std::mutex> lock(rezArchiveFileEntry->mutex);
+
         // Seek to file's offset within REZ file and load it
         rezArchiveFileEntry->fileStream->seekg(rezFile->offset, std::ios::beg);
         rezArchiveFileEntry->fileStream->read(g_rezFileDataMap[rezFile], rezFile->size);
-		mutexUnlock(&rezArchiveFileEntry->switchMutex);
     }
 
     return g_rezFileDataMap[rezFile];
@@ -273,6 +268,7 @@ RezDirectory* WAP_GetRezDirectoryFromRezDirectory(RezDirectory* rezDirectory, co
 
 RezFile* WAP_GetRezFileFromRezArchive(RezArchive* rezArchive, const char* rezFilePath)
 {
+    static std::mutex mutex;
 
     // Check if we got valid input
     if ((rezArchive == NULL) || (rezArchive->rootDirectory == NULL) ||

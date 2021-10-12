@@ -1,6 +1,8 @@
 #include "Converters.h"
 #include "../Events/Events.h"
 
+void FixupWwdObject(WwdObject* pObj, int levelNumber);
+
 TiXmlElement* WwdToXml(WapWwd* wapWwd, int levelNumber)
 {
     PROFILE_CPU("WWD->XML");
@@ -54,6 +56,12 @@ TiXmlElement* WwdToXml(WapWwd* wapWwd, int levelNumber)
 
         // This is Monolith's hack which I dont get
         if (levelNumber == 5 && tileDescIdx == 509)
+        {
+            wwdTileDesc.insideAttrib = WAP_TILE_ATTRIBUTE_CLEAR;
+            wwdTileDesc.outsideAttrib = WAP_TILE_ATTRIBUTE_CLEAR;
+        }
+        // ???????????
+        if (levelNumber == 11 && tileDescIdx == 39)
         {
             wwdTileDesc.insideAttrib = WAP_TILE_ATTRIBUTE_CLEAR;
             wwdTileDesc.outsideAttrib = WAP_TILE_ATTRIBUTE_CLEAR;
@@ -192,6 +200,7 @@ TiXmlElement* WwdToXml(WapWwd* wapWwd, int levelNumber)
         WwdObject actorProperties = wwdActors[actorIdx];
 
         WwdObject* wwdObject = &actorProperties;
+        FixupWwdObject(wwdObject, levelNumber);
 
         std::string name = actorProperties.name;
         std::string logic = actorProperties.logic;
@@ -283,11 +292,16 @@ TiXmlElement* WwdToXml(WapWwd* wapWwd, int levelNumber)
             {
                 case 5: proto = ActorPrototype_Level5_CrumblingPeg; break;
                 case 11: proto = ActorPrototype_Level11_BreakPlank; break;
+                case 12: proto = ActorPrototype_Level12_CrumblingPeg; break;
                 default: notLoadedActorList.push_back(actorProperties.logic); continue;
             }
 
             // Temporary hack
-            assert(proto == ActorPrototype_Level5_CrumblingPeg || proto == ActorPrototype_Level11_BreakPlank);
+            assert(
+                proto == ActorPrototype_Level5_CrumblingPeg 
+                || proto == ActorPrototype_Level11_BreakPlank
+                || proto == ActorPrototype_Level12_CrumblingPeg
+            );
 
             int crumbleDelay = wwdObject->counter;
             int width = wwdObject->width;
@@ -299,6 +313,20 @@ TiXmlElement* WwdToXml(WapWwd* wapWwd, int levelNumber)
 
                 position.x += 64;
             }
+        }
+        else if (logic == "Laser")
+        {
+            // TODO: missing logic
+            continue;
+        }
+        else if (logic == "AquatisCrack")
+        {
+            // TODO: missing logic
+            continue;
+        }
+        else if (levelNumber == 12 && (logic == "AquatisDynamite" || logic == "Tentacle"))
+        {
+            continue;
         }
         else
         {
@@ -356,4 +384,10 @@ TiXmlElement* WwdToXml(WapWwd* wapWwd, int levelNumber)
 
     //xmlDoc.SaveFile("LEVEL1.xml");
     return root;
+}
+
+void FixupWwdObject(WwdObject* pObj, int levelNumber)
+{
+    std::string logic = pObj->logic;
+    std::string image = pObj->imageSet;
 }
